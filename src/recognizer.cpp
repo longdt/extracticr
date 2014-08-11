@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "recognizer.h"
 //#define NOMINMAX
 //#include "imdebug.h"
-
+#define PREDICT_SOFTMAX_SCORE
 using namespace cv;
 
 using namespace std;
@@ -174,13 +174,19 @@ label_t digit_recognizer::predict(const vec_t& in, double* conf) {
 			max_index = i;
 			max_val = out[i];
 		}
+#ifdef PREDICT_SOFTMAX_SCORE
 		if (conf != NULL) {
 			out[i] = exp(3.75 * out[i]);
 			sum += out[i];
 		}
+#endif
 	}
 	if (conf != NULL) {
+#ifdef PREDICT_SOFTMAX_SCORE
 		*conf = out[max_index] / (sum + exp(5));
+#else 
+		*conf = max_val;
+#endif
 	}
 	return max_index;
 }
