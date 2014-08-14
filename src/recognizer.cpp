@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "recognizer.h"
 //#define NOMINMAX
 //#include "imdebug.h"
-#define PREDICT_SOFTMAX_SCORE
+
 using namespace cv;
 
 using namespace std;
@@ -157,13 +157,13 @@ void digit_recognizer::test() {
 		vec_t in;
 		string file = "pad" + to_string(i) + ".png";
 		load_image(in, file, false);
-		cout << "predict image test" << file << ": " << predict(in) << endl;
+		cout << "predict image test" << file << ": " << predict(in, NULL) << endl;
 	}
 	cin.get();
 
 }
 
-label_t digit_recognizer::predict(const vec_t& in, double* conf) {
+label_t digit_recognizer::predict(const vec_t& in, double* conf, double* softmaxScore) {
 	vec_t out;
 	nn.predict(in, &out);
 	double max_val = out[0];
@@ -174,30 +174,40 @@ label_t digit_recognizer::predict(const vec_t& in, double* conf) {
 			max_index = i;
 			max_val = out[i];
 		}
-#ifdef PREDICT_SOFTMAX_SCORE
-		if (conf != NULL) {
+
+		if (softmaxScore != NULL) {
 			out[i] = exp(3.75 * out[i]);
 			sum += out[i];
 		}
-#endif
 	}
 	if (conf != NULL) {
-#ifdef PREDICT_SOFTMAX_SCORE
-		*conf = out[max_index] / (sum + exp(5));
-#else 
 		*conf = max_val;
-#endif
+	}
+	if (softmaxScore != NULL) {
+		*softmaxScore = out[max_index] / (sum + exp(5));
 	}
 	return max_index;
 }
 
-label_t digit_recognizer::predict(const cv::Mat& digit, double* conf) {
+label_t digit_recognizer::predict(const cv::Mat& digit, double* conf, double* softmaxScore) {
 	assert(digit.cols == 28 && digit.rows == 28);
 	vec_t in;
 	mat_to_vect(digit, in);
-	return predict(in, conf);
+	return predict(in, conf, softmaxScore);
 }
 
-void digit_recognizer::predict(const vec_t& in, vec_t *out) {
-	nn.predict(in, out);
+void digit_recognizer::predict(const vec_t& in, vec_t& out) {
+	nn.predict(in, &out);
+}
+
+digit_recognizer::result digit_recognizer::predict(const vec_t& in) {
+	result r;
+	r.label = predict(in, &r.conf, &r.softmaxScore);
+	return r;
+}
+
+digit_recognizer::result digit_recognizer::predict(const cv::Mat& in) {
+	result r;
+	r.label = predict(in, &r.conf, &r.softmaxScore);
+	return r;
 }

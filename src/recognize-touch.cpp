@@ -16,6 +16,40 @@ extern digit_recognizer recognizer;
 
 std::string recognizeND(Mat& src, double& srcConf);
 
+
+cv::Mat makeDigitMat(cv::Mat& crop) {
+	int width = 0;
+	int height = 0;
+	int paddingX = 0;
+	int paddingY = 0;
+	if (crop.rows > crop.cols) {
+		//scale to height
+		height = 20;
+		width = (height * crop.cols) / crop.rows;
+	}
+	else {
+		width = 20;
+		//scale to width
+		height = (width * crop.rows) / crop.cols;
+	}
+	cv::Size size(width, height);
+	cv::Mat resize;
+	cv::resize(crop, resize, size);
+	cv::Mat padded(28, 28, CV_8UC1);
+	padded.setTo(cv::Scalar::all(0));
+	paddingX = (28 - resize.cols) / 2;
+	paddingY = (28 - resize.rows) / 2;
+	resize.copyTo(padded(cv::Rect(paddingX, paddingY, resize.cols, resize.rows)));
+	//		cv::copyMakeBorder(resize, pad, 4, 4, 4, 4, cv::BORDER_CONSTANT, cv::Scalar(0));
+	return padded;
+}
+
+cv::Mat makeDigitMat(std::vector<cv::Point2i >& blob, cv::Rect* bound) {
+	cv::Mat crop = cropBlob(blob, *bound);
+	cropMat(deslant(crop), crop);
+	return makeDigitMat(crop);
+}
+
 void drawCut(Mat& src, vector<Point> &cut) {
 	for (auto p : cut) {
 		src.at<uchar>(p) = 100;
@@ -154,6 +188,9 @@ std::string recognizeND(Mat& src, double& srcConf) {
 		return "";
 	}
 	int start = (int)(src.cols * 0.375);
+	if (start > src.rows) {
+		start = src.rows;
+	}
 	double conf[4];
 	for (int i = 0; i < 4; ++i) {
 		conf[i] = srcConf;
@@ -191,47 +228,130 @@ std::string recognizeND(Mat& src, double& srcConf) {
 	return val[index];
 }
 
-bool recognizeDigits(std::vector<cv::Point2i >& blob, cv::Rect& bound, int& label, double conf) {
+std::string recognizeDigits(std::vector<cv::Point2i >& blob, cv::Rect& bound, int estDigitWidth, digit_recognizer::result& r) {
 	cv::Mat temp = cropBlob(blob, bound);
-	double tempConf = 0;
-	int tempLabel = recognize1D(temp, tempConf);
-	if (tempConf > conf) {
-		label = tempLabel;
-		conf = tempConf;
+	cv::Mat digit = makeDigitMat(temp);
+	digit_recognizer::result otherResult = recognizer.predict(digit);
+	if (otherResult.conf > r.conf || otherResult.softmaxScore > r.softmaxScore) {
+		r = otherResult;
 	}
 	cv::Mat crop;
 	cropMat(temp, crop, 1);
 //	cropMat(deslant(temp), crop, 1);
 	//guest number digit
-	int numDigit = 0;
+	int numDigit = (int) (bound.width /(float) estDigitWidth + 0.4);
 	int width = crop.cols;
 	int height = crop.rows;
 	float aspect = width /(float) height;
-	if (aspect <= 0.5) {
+	if (numDigit >= 2) {
+		r.conf = -1;
+	}
+	if (aspect <= 0.5 || numDigit == 1) {
 		numDigit = 1;
 	} else
 	if (aspect <= 1.8) {
-		std::string val = recognizeND(crop, conf);
-		if (val.empty()) {
-			return false;
-		}
-
-		std::cout << "\"" << val << "\"";
+		std::string val = recognizeND(crop, r.conf);
 		numDigit = 2;
-		return true;
+		return val;
 	}
 	else if (aspect > 1.1) {
-		std::string val = recognizeND(crop, conf);
-		if (val.empty()) {
-			return false;
-		}
-
-		std::cout << "\"" << val << "\"";
+		std::string val = recognizeND(crop, r.conf);
 		numDigit = 3;
-		return true;
+		return val;
 	}
-	return false;
-	//try cut
-	//vector<int> cut;
-	//dropfallLeft();
+	return "";
+}
+
+
+bool isSingleDigit(double conf, cv::Rect& bound) {
+	float aspect = bound.width / (float)(bound.height);
+	if (aspect > 1) {
+		return conf > 0.1;
+	}
+	else if (aspect >= 0.6) {
+		return conf > 0.08;
+	}
+	else if (aspect >= 0.5) {
+		return conf > 0.05;
+	}
+	else {
+		return conf > 0.01;
+	}
+}
+
+std::string concate(vector<string> strs) {
+	stringstream ss;
+	for (string& str : strs) {
+		ss << str;
+	}
+	return ss.str();
+}
+
+std::string extractDigit(cv::Mat &binary, std::vector < std::vector<cv::Point2i > >& blobs, std::vector<cv::Rect> &bounds) {
+	std::vector<int> projectV;
+	projectV.resize(binary.cols, 0);
+	vector<int> order;
+	sortBlobsByVertical(bounds, order);
+	vector<string> labels;
+	labels.resize(order.size());
+	vector<digit_recognizer::result> predRs;
+	int blobIdx = 0;
+	average<int> widthDigit;
+	//try recognize sing digit first
+	for (int i = 0; i < order.size(); ++i) {
+		blobIdx = order[i];
+		cv::Mat digit = makeDigitMat(blobs[blobIdx], &bounds[blobIdx]);
+		digit_recognizer::result r = recognizer.predict(digit);
+		predRs.push_back(r);
+		//debug show info
+		imshow(std::to_string(r.label) + "pad" + std::to_string(r.conf) + "*" + std::to_string(r.softmaxScore), digit);
+		if (r.softmaxScore > 0.09) {
+			labels[i] = to_string(r.label);
+			if (r.label != 1) {
+				widthDigit.update(bounds[blobIdx].width);
+			}
+			continue;
+		}
+	}
+	int dw = widthDigit.size() > 0 ? widthDigit.mean() : -1;
+	//try recognize touching-digit 
+	for (int i = 0; i < labels.size(); ++i) {
+		if (!labels[i].empty()) {
+			continue;
+		}
+		digit_recognizer::result r = predRs[i];
+		blobIdx = order[i];
+		if (isSingleDigit(r.softmaxScore, bounds[blobIdx])) {
+			labels[i] = to_string(r.label);
+		}
+		else if ((labels[i] = recognizeDigits(blobs[blobIdx], bounds[blobIdx], dw, r)).empty()){
+			//debug print miss recognize
+			//std::cout << r.label;
+			updateVerticalProjection(blobs[blobIdx], projectV);
+		}
+	}
+	bool reject = false;
+	for (int i = 0; i < labels.size(); ++i) {
+		if (!labels[i].empty()) {
+			continue;
+		}
+		else if (predRs[i].softmaxScore > 0.0095) {
+			labels[i] = to_string(predRs[i].label);
+		}
+		else {
+			reject = true;
+			labels[i] = "---" + to_string(predRs[i].label);
+		}
+	}
+	if (reject) {
+		std::cout << concate(labels) << std::endl;
+		return "";
+	}
+	return concate(labels);
+	auto cuts = genVerticalCuts(projectV);
+	//draw and show 
+	cv::Scalar color = cv::Scalar(255, 255, 255);
+	for (int c : cuts) {
+		cv::line(binary, cv::Point(c, 0), cv::Point(c, binary.cols), color, 1, 8);
+	}
 }
