@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
+#include <sstream>
 #include "recognizer.h"
 #include "util/misc.h"
 #include "preprocessor.h"
@@ -13,62 +13,7 @@ using namespace cv;
 
 extern digit_recognizer recognizer;
 
-void findBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &blobs, std::vector<cv::Rect> *bounds)
-{
-	blobs.clear();
-	if (bounds != NULL) {
-		bounds->clear();
-	}
-	// Fill the label_image with the blobs
-	// 0  - background
-	// 1  - unlabelled foreground
-	// 2+ - labelled foreground
-
-	cv::Mat label_image;
-	binary.convertTo(label_image, CV_32SC1);
-
-	int label_count = 2; // starts at 2 because 0,1 are used already
-
-	for (int y = 0; y < label_image.rows; y++) {
-		int *row = (int*)label_image.ptr(y);
-		for (int x = 0; x < label_image.cols; x++) {
-			if (row[x] != 1) {
-				continue;
-			}
-
-			cv::Rect rect;
-			cv::floodFill(label_image, cv::Point(x, y), label_count, &rect, 0, 0, 4);
-
-			std::vector <cv::Point2i> blob;
-			int maxX = 0, minX = binary.cols, maxY = 0, minY = binary.rows;
-			for (int i = rect.y; i < (rect.y + rect.height); i++) {
-				int *row2 = (int*)label_image.ptr(i);
-				for (int j = rect.x; j < (rect.x + rect.width); j++) {
-					if (row2[j] != label_count) {
-						continue;
-					}
-					else if (bounds != NULL) {
-						maxX = std::max(maxX, j);
-						minX = std::min(minX, j);
-
-						maxY = std::max(maxY, i);
-						minY = std::min(minY, i);
-					}
-					blob.push_back(cv::Point2i(j, i));
-				}
-			}
-			blobs.push_back(blob);
-			if (bounds != NULL) {
-				rect.x = minX;
-				rect.y = minY;
-				rect.width = maxX - minX + 1;
-				rect.height = maxY - minY + 1;
-				bounds->push_back(rect);
-			}
-			label_count++;
-		}
-	}
-}
+void cv::doNothing() {}
 
 cv::Mat cropBlob(std::vector<cv::Point2i >& blob, cv::Rect& bound, int pad) {
 	cv::Mat rs = cv::Mat::zeros(bound.height + 2 * pad, bound.width + 2 * pad, CV_8UC1);
@@ -114,203 +59,7 @@ bool cropMat(cv::Mat& src, cv::Mat& dst, int pad) {
 	return true;
 }
 
-cv::Mat makeDigitMat(cv::Mat& crop) {
-	int width = 0;
-	int height = 0;
-	int paddingX = 0;
-	int paddingY = 0;
-	if (crop.rows > crop.cols) {
-		//scale to height
-		height = 20;
-		width = (height * crop.cols) / crop.rows;
-	}
-	else {
-		width = 20;
-		//scale to width
-		height = (width * crop.rows) / crop.cols;
-	}
-	cv::Size size(width, height);
-	cv::Mat resize;
-	cv::resize(crop, resize, size);
-	cv::Mat padded(28, 28, CV_8UC1);
-	padded.setTo(cv::Scalar::all(0));
-	paddingX = (28 - resize.cols) / 2;
-	paddingY = (28 - resize.rows) / 2;
-	resize.copyTo(padded(cv::Rect(paddingX, paddingY, resize.cols, resize.rows)));
-	//		cv::copyMakeBorder(resize, pad, 4, 4, 4, 4, cv::BORDER_CONSTANT, cv::Scalar(0));
-	return padded;
-}
 
-cv::Mat makeDigitMat(std::vector<cv::Point2i >& blob, cv::Rect* bound) {
-	cv::Mat crop = cropBlob(blob, *bound);
-	cropMat(deslant(crop), crop);
-	int width = 0;
-	int height = 0;
-	int paddingX = 0;
-	int paddingY = 0;
-	if (crop.rows > crop.cols) {
-		//scale to height
-		height = 20;
-		width = (height * crop.cols) / crop.rows;
-	}
-	else {
-		width = 20;
-		//scale to width
-		height = (width * crop.rows) / crop.cols;
-	}
-	cv::Size size(width, height);
-	cv::Mat resize;
-	cv::resize(crop, resize, size);
-	cv::Mat padded(28, 28, CV_8UC1);
-	padded.setTo(cv::Scalar::all(0));
-	paddingX = (28 - resize.cols) / 2;
-	paddingY = (28 - resize.rows) / 2;
-	resize.copyTo(padded(cv::Rect(paddingX, paddingY, resize.cols, resize.rows)));
-	//		cv::copyMakeBorder(resize, pad, 4, 4, 4, 4, cv::BORDER_CONSTANT, cv::Scalar(0));
-	return padded;
-}
-
-bool isSingleDigit(double conf, cv::Rect& bound) {
-	float aspect = bound.width / (float)(bound.height);
-	if (aspect > 1) {
-		return conf > 0.8;
-	}
-	else if (aspect >= 0.6) {
-		return conf > 0.6;
-	}
-	else if (aspect >= 0.5) {
-		return conf > 0.1;
-	}
-	else {
-		return conf > 0;
-	}
-}
-
-void extractDigit(cv::Mat &binary, std::vector < std::vector<cv::Point2i > >& blobs, std::vector<cv::Rect> &bounds) {
-	std::vector<int> projectV;
-	projectV.resize(binary.cols, 0);
-	vector<int> order;
-	sortBlobsByVertical(bounds, order);
-	for (auto i : order) {
-		vec_t in;
-		double conf;
-		cv::Mat digit = makeDigitMat(blobs[i], &bounds[i]);
-		mat_to_vect(digit, in);
-		int label = recognizer.predict(in, &conf);
-		cv::imshow(std::to_string(label) + "pad" + std::to_string(conf), digit);
-		if (isSingleDigit(conf, bounds[i])) {
-			std::cout << label;
-		}
-		else if (!recognizeDigits(blobs[i], bounds[i], label, conf)){
-			std::cout << label;
-			updateVerticalProjection(blobs[i], projectV);
-		}
-	}
-	std::cout << std::endl;
-	auto cuts = genVerticalCuts(projectV);
-	//draw and show 
-	cv::Scalar color = cv::Scalar(255, 255, 255);
-	for (int c : cuts) {
-		cv::line(binary, cv::Point(c, 0), cv::Point(c, binary.cols), color, 1, 8);
-	}
-}
-
-class DisjointDigit {
-public:
-	bool operator() (cv::Rect b1, cv::Rect b2) {
-		int maxX1 = b1.x + b1.width;
-		int maxX2 = b2.x + b2.width;
-		if (b1.x >= maxX2 || b2.x >= maxX1) {
-			return false;
-		}
-
-		int min = 0;
-		int max = 0;
-		if (b1.x < maxX2 || b2.x < maxX1) {
-			min = std::max(b1.x, b2.x);
-			max = std::min(maxX1, maxX2);
-		}
-		float overLap = (max - min);
-		return (overLap / b1.width + overLap / b2.width) > 0.7 ? true : (b1.y + b1.height <= b2.y || b2.y + b2.height <= b1.y);
-	}
-};
-
-
-
-void groupVertical(std::vector < std::vector<cv::Point2i> > &blobs, std::vector<cv::Rect> &bounds, std::vector<int> &labels) {
-	cv::partition(bounds, labels, DisjointDigit());
-	//join group
-	for (int label = 0; label < labels.size(); ++label) {
-		//find first blob of label
-		std::vector<cv::Point2i> *blob = NULL;
-		cv::Rect *bound = NULL;
-		int i = 0;
-		for (; i < labels.size(); ++i) {
-			if (labels[i] == label) {
-				blob = &blobs[i];
-				bound = &bounds[i];
-				break;
-			}
-		}
-		if (blob == NULL) { //no blob (aka no label)
-			break;
-		}
-		++i;
-		bool joint = false;
-		while (i < labels.size()) {
-			if (labels[i] == label) {
-				blob->insert(blob->end(), blobs[i].begin(), blobs[i].end());
-				blobs.erase(blobs.begin() + i);
-				bounds.erase(bounds.begin() + i);
-				labels.erase(labels.begin() + i);
-				joint = true;
-				continue;
-			}
-			++i;
-		}
-		if (joint) {
-			*bound = cv::boundingRect(*blob);
-		}
-	}
-	//filter low area
-	double sum = 0;
-	int i = 0;
-	for (; i < bounds.size(); ++i) {
-		sum += bounds[i].area();
-	}
-	sum = sum / bounds.size();
-	i = 0;
-	while (i < bounds.size()) {
-		if (bounds[i].area() / sum < 0.2) {
-			blobs.erase(blobs.begin() + i);
-			bounds.erase(bounds.begin() + i);
-			labels.erase(labels.begin() + i);
-			continue;
-		}
-		++i;
-	}
-}
-
-class VerticalSort {
-private:
-	std::vector<cv::Rect> m_bounds;
-public:
-	VerticalSort(std::vector<cv::Rect> &bounds) : m_bounds(bounds) {}
-	bool operator() (int i, int j) { 
-		int centeri = m_bounds[i].x + m_bounds[i].width / 2;
-		int centerj = m_bounds[j].x + m_bounds[j].width / 2;
-		return (centeri < centerj); 
-	}
-};
-
-void sortBlobsByVertical(std::vector<cv::Rect> &bounds, std::vector<int> &order) {
-	order.resize(bounds.size());
-	for (int i = 0; i < bounds.size(); ++i) {
-		order[i] = i;
-	}
-	//sort
-	sort(order.begin(), order.end(), VerticalSort(bounds));
-}
 
 void projectVeritcal(cv::Mat &input, std::vector<int> &output) {
 	output.resize(input.cols);
@@ -386,6 +135,19 @@ int projectWidth(cv::Mat& input) {
 		}
 	}
 	return width;
+}
+
+
+int costSlant(cv::Mat& input) {
+	std::vector < std::vector<cv::Point2i> > blobs;
+	std::vector<cv::Rect> bounds;
+	cv::Mat temp = input / 255;
+	findBlobs(temp, blobs, &bounds);
+	int cost = 0;
+	for (auto b : bounds) {
+		cost += b.width;
+	}
+	return cost;
 }
 
 #define PI 3.14159265
