@@ -54,8 +54,12 @@ bool cropMat(cv::Mat& src, cv::Mat& dst, int pad) {
 		return false;
 	}
 	auto rect = cv::Rect(minX, minY, maxX - minX + 1, maxY - minY + 1);
-	dst = cv::Mat::zeros(rect.height + 2 * pad, rect.width + 2 * pad, src.type());
-	src(rect).copyTo(dst(cv::Rect(pad, pad, rect.width, rect.height)));
+	if (pad > 0) {
+		dst = cv::Mat::zeros(rect.height + 2 * pad, rect.width + 2 * pad, src.type());
+		src(rect).copyTo(dst(cv::Rect(pad, pad, rect.width, rect.height)));
+	} else {
+		dst = src(rect);
+	}
 	return true;
 }
 
