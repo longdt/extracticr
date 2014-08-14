@@ -46,7 +46,8 @@ cv::Mat makeDigitMat(cv::Mat& crop) {
 
 cv::Mat makeDigitMat(std::vector<cv::Point2i >& blob, cv::Rect* bound) {
 	cv::Mat crop = cropBlob(blob, *bound);
-	cropMat(deslant(crop), crop);
+	crop = deslant(crop);
+	cropMat(crop, crop);
 	return makeDigitMat(crop);
 }
 
