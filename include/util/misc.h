@@ -13,7 +13,7 @@ private:
 	vector<T> values;
 	T sum;
 public:
-	
+	average() : sum(0) {}
 	void update(T value) {
 		values.push_back(value);
 		sum += value;
