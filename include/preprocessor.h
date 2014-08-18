@@ -17,7 +17,9 @@ void sortBlobsByVertical(std::vector<cv::Rect> &bounds, std::vector<int> &order)
 
 //dropfall
 void dropfallLeft(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);
+void dropfallExtLeft(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);
 void dropfallRight(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);
+void dropfallExtRight(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);
 
 //preprocessing
 cv::Mat cropBlob(std::vector<cv::Point2i >& blob, cv::Rect& bound, int pad = 0);

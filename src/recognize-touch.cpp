@@ -192,11 +192,11 @@ std::string recognizeND(Mat& src, double& srcConf) {
 	if (start > src.rows) {
 		start = src.rows;
 	}
-	double conf[4];
-	for (int i = 0; i < 4; ++i) {
+	double conf[8];
+	for (int i = 0; i < 8; ++i) {
 		conf[i] = srcConf;
 	}
-	std::string val[4];
+	std::string val[8];
 
 	vector<Point> cut;
 	dropfallLeft(src, cut, start, true);
@@ -211,19 +211,43 @@ std::string recognizeND(Mat& src, double& srcConf) {
 		conf[1] = -1;
 	}
 
-	start = src.cols - 1 - start;
-	dropfallRight(src, cut, start, true);
+	dropfallExtLeft(src, cut, start, true);
 	val[2] = tryGuestND(src, cut, conf[2]);
 	if (val[2].empty()) {
 		conf[2] = -1;
 	}
 
-	dropfallRight(src, cut, start, false);
+	dropfallExtLeft(src, cut, start, false);
 	val[3] = tryGuestND(src, cut, conf[3]);
 	if (val[3].empty()) {
 		conf[3] = -1;
 	}
-	auto it = std::max_element(conf, conf + 4);
+
+	start = src.cols - 1 - start;
+	dropfallRight(src, cut, start, true);
+	val[4] = tryGuestND(src, cut, conf[4]);
+	if (val[4].empty()) {
+		conf[4] = -1;
+	}
+
+	dropfallRight(src, cut, start, false);
+	val[5] = tryGuestND(src, cut, conf[5]);
+	if (val[5].empty()) {
+		conf[5] = -1;
+	}
+
+	dropfallExtRight(src, cut, start, true);
+	val[6] = tryGuestND(src, cut, conf[6]);
+	if (val[6].empty()) {
+		conf[6] = -1;
+	}
+
+	dropfallExtRight(src, cut, start, false);
+	val[7] = tryGuestND(src, cut, conf[7]);
+	if (val[7].empty()) {
+		conf[7] = -1;
+	}
+	auto it = std::max_element(conf, conf + 8);
 	srcConf = *it;
 	int index = it - conf;
 	return val[index];
