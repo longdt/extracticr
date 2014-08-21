@@ -25,7 +25,7 @@ public:
 
 	T deviation() {
 		T m = mean();
-		T devSum;
+		T devSum(0);
 		for (T v : values) {
 			devSum += abs(m - v);
 		}

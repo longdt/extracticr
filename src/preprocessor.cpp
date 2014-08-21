@@ -65,6 +65,19 @@ bool cropMat(cv::Mat& src, cv::Mat& dst, int pad) {
 
 
 
+void projectHorizontal(cv::Mat &input, std::vector<int> &output) {
+	output.resize(input.rows);
+	for (int i = 0; i < input.rows; ++i) {
+		int sum = 0;
+		for (int j = 0; j < input.cols; ++j) {
+			if (input.at<uchar>(i, j) > 0) {
+				sum += 1;
+			}
+		}
+		output[i] = sum;
+	}
+}
+
 void projectVeritcal(cv::Mat &input, std::vector<int> &output) {
 	output.resize(input.cols);
 	for (int i = 0; i < input.cols; ++i) {
@@ -220,4 +233,38 @@ cv::Mat deslant(cv::Mat& input) {
 		continue;
 	}
 	return slant(input, degree);
+}
+
+
+void defragment(std::vector < std::vector<cv::Point2i> > &blobs, std::vector<cv::Rect> &bounds) {
+
+}
+
+inline double _distance(cv::Point2i p1, cv::Point2i p2) {
+	return sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
+}
+
+double distanceBlobs(std::vector<cv::Point2i >& blob1, std::vector<cv::Point2i >& blob2) {
+	double min = INT_MAX;
+	double temp = 0;
+	for (auto &p1 : blob1) {
+		for (auto &p2 : blob2) {
+			if ((temp = _distance(p1, p2)) < min) {
+				min = temp;
+			}
+		}
+	}
+	return min;
+}
+
+cv::Mat cropDigitString(cv::Mat& src) {
+	vector<int> horizontal;
+	projectHorizontal(src, horizontal);
+	auto it = std::max_element(horizontal.begin(), horizontal.end());
+	int ymin = it - horizontal.begin();
+	for (; ymin > 0 && horizontal[ymin] > 0; --ymin) {}
+	int ymax = it - horizontal.begin();
+	for (; ymax < horizontal.size() - 1 && horizontal[ymax] > 0; ++ymax) {}
+	cv::Mat dst = src(cv::Rect(0, ymin, src.cols, ymax - ymin)).clone();
+	return dst;
 }
