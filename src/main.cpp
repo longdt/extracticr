@@ -27,7 +27,7 @@ cv::Mat removeNoise(const cv::Mat& src) {
 int main(int argc, char **argv)
 {
 	char c = 0;
-	path p("D:\\workspace\\data\\train");
+	path p("/media/thienlong/linux/CAR/cvl-strings/train");
 	if (!exists(p) || !is_directory(p)) {
 		return 0;
 	}
@@ -41,31 +41,31 @@ int main(int argc, char **argv)
 	int correct = 0;
 	for (vec::const_iterator it(v.begin()), it_end(v.end()); it != it_end && c != 'q'; ++it)
 	{
-		//cv::Mat img = cv::imread(it->string(), 0); // force greyscale
-		cv::Mat img = cv::imread("D:\\workspace\\data\\train\\135579-0152-10.png", 0); // force greyscale
+		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
+//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/886439-0002-09.png", 0); // force greyscale
 		if (!img.data) {
 			std::cout << "File not found" << std::endl;
 			return -1;
 		}
 		img = 255 - img;
-		cv::namedWindow("binary");
-		cv::namedWindow("labelled");
+//		cv::namedWindow("binary");
+//		cv::namedWindow("labelled");
 
 		cv::Mat binary;
-		std::vector < std::vector<cv::Point2i > > blobs;
-		std::vector<cv::Rect> bounds;
+		Blobs blobs;
 		cv::threshold(img, binary, 0.0, 1.0, cv::THRESH_BINARY | CV_THRESH_OTSU);
 //		binary = removeNoise(binary);
+		binary = cropDigitString(binary);
 		binary = deslant(binary);
-		findBlobs(binary, blobs, &bounds);
+		findBlobs(binary, blobs);
 		binary = binary * 255;
 		cv::imshow("binary", binary);
 		cv::Mat output = drawBlob(binary, blobs);
 		cv::imshow("labelled", output);
 		cv::imshow(it->filename().string(), img);
 		std::vector<int> labels;
-		groupVertical(blobs, bounds, labels);
-		string actual = extractDigit(binary, blobs, bounds);
+		groupVertical(blobs, labels);
+		string actual = extractDigit(binary, blobs);
 		string desire = parse_label(it->filename().string());
 		if (actual.empty()) {
 			++reject;
