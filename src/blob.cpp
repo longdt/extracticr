@@ -1,12 +1,34 @@
 #include "preprocessor.h"
 #include <opencv2/imgproc/imgproc.hpp>
 
-void findBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &blobs, std::vector<cv::Rect> *bounds)
-{
-	blobs.clear();
-	if (bounds != NULL) {
-		bounds->clear();
+Blob::Blob() : needNewRect(false) {
+}
+
+cv::Rect Blob::boundingRect() {
+	if (needNewRect) {
+		bound = cv::boundingRect(points);
+		needNewRect = false;
 	}
+	return bound;
+}
+void Blob::add(const Blob& other) {
+	needNewRect = true;
+	points.insert(points.end(), other.points.begin(), other.points.end());
+}
+void Blob::add(const cv::Point2i& point) {
+	needNewRect = true;
+	points.push_back(point);
+}
+
+
+Blobs findBlobs(const cv::Mat &binary) {
+	Blobs blobs;
+	findBlobs(binary, blobs);
+	return blobs;
+}
+
+void findBlobs(const cv::Mat &binary, Blobs &blobs) {
+	clearBlobs(blobs);
 	// Fill the label_image with the blobs
 	// 0  - background
 	// 1  - unlabelled foreground
@@ -27,7 +49,7 @@ void findBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &
 			cv::Rect rect;
 			cv::floodFill(label_image, cv::Point(x, y), label_count, &rect, 0, 0, 4);
 
-			std::vector <cv::Point2i> blob;
+			Blob *blob = new Blob();
 			int maxX = 0, minX = binary.cols, maxY = 0, minY = binary.rows;
 			for (int i = rect.y; i < (rect.y + rect.height); i++) {
 				int *row2 = (int*)label_image.ptr(i);
@@ -35,31 +57,23 @@ void findBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &
 					if (row2[j] != label_count) {
 						continue;
 					}
-					else if (bounds != NULL) {
-						maxX = std::max(maxX, j);
-						minX = std::min(minX, j);
-
-						maxY = std::max(maxY, i);
-						minY = std::min(minY, i);
-					}
-					blob.push_back(cv::Point2i(j, i));
+					blob->add(cv::Point2i(j, i));
 				}
 			}
 			blobs.push_back(blob);
-			if (bounds != NULL) {
-				rect.x = minX;
-				rect.y = minY;
-				rect.width = maxX - minX + 1;
-				rect.height = maxY - minY + 1;
-				bounds->push_back(rect);
-			}
 			label_count++;
 		}
 	}
 }
 
+void clearBlobs(Blobs &blobs) {
+	for (Blob* blob : blobs) {
+		delete blob;
+	}
+	blobs.clear();
+}
 
-cv::Mat drawBlob(const cv::Mat& src, const std::vector < std::vector<cv::Point2i > >& blobs) {
+cv::Mat drawBlob(const cv::Mat& src, const Blobs& blobs) {
 	cv::Mat output = cv::Mat::zeros(src.size(), CV_8UC3);
 	// Randomy color the blobs
 	for (size_t i = 0; i < blobs.size(); i++) {
@@ -67,9 +81,9 @@ cv::Mat drawBlob(const cv::Mat& src, const std::vector < std::vector<cv::Point2i
 		unsigned char g = 255 * (rand() / (1.0 + RAND_MAX));
 		unsigned char b = 255 * (rand() / (1.0 + RAND_MAX));
 
-		for (size_t j = 0; j < blobs[i].size(); j++) {
-			int x = blobs[i][j].x;
-			int y = blobs[i][j].y;
+		for (size_t j = 0; j < blobs[i]->points.size(); j++) {
+			int x = blobs[i]->points[j].x;
+			int y = blobs[i]->points[j].y;
 
 			output.at<cv::Vec3b>(y, x)[0] = b;
 			output.at<cv::Vec3b>(y, x)[1] = g;
@@ -81,7 +95,9 @@ cv::Mat drawBlob(const cv::Mat& src, const std::vector < std::vector<cv::Point2i
 
 class DisjointDigit {
 public:
-	bool operator() (cv::Rect b1, cv::Rect b2) {
+	bool operator() (Blob* blob1, Blob* blob2) {
+		cv::Rect b1 = blob1->boundingRect();
+		cv::Rect b2 = blob2->boundingRect();
 		int maxX1 = b1.x + b1.width;
 		int maxX2 = b2.x + b2.width;
 		if (b1.x >= maxX2 || b2.x >= maxX1) {
@@ -101,18 +117,16 @@ public:
 
 
 
-void groupVertical(std::vector < std::vector<cv::Point2i> > &blobs, std::vector<cv::Rect> &bounds, std::vector<int> &labels) {
-	cv::partition(bounds, labels, DisjointDigit());
+void groupVertical(Blobs& blobs, std::vector<int> &labels) {
+	cv::partition(blobs, labels, DisjointDigit());
 	//join group
 	for (int label = 0; label < labels.size(); ++label) {
 		//find first blob of label
-		std::vector<cv::Point2i> *blob = NULL;
-		cv::Rect *bound = NULL;
+		Blob *blob = NULL;
 		int i = 0;
 		for (; i < labels.size(); ++i) {
 			if (labels[i] == label) {
-				blob = &blobs[i];
-				bound = &bounds[i];
+				blob = blobs[i];
 				break;
 			}
 		}
@@ -120,39 +134,34 @@ void groupVertical(std::vector < std::vector<cv::Point2i> > &blobs, std::vector<
 			break;
 		}
 		++i;
-		bool joint = false;
 		while (i < labels.size()) {
 			if (labels[i] == label) {
-				blob->insert(blob->end(), blobs[i].begin(), blobs[i].end());
+				blob->add(*blobs[i]);
 				blobs.erase(blobs.begin() + i);
-				bounds.erase(bounds.begin() + i);
 				labels.erase(labels.begin() + i);
-				joint = true;
 				continue;
 			}
 			++i;
-		}
-		if (joint) {
-			*bound = cv::boundingRect(*blob);
 		}
 	}
 	//filter low area
 	double perimaterSum = 0;
 	double baseLineSum = 0;
 	int i = 0;
-	for (; i < bounds.size(); ++i) {
-		perimaterSum += (bounds[i].width + bounds[i].height);
-		baseLineSum += bounds[i].y + bounds[i].height;
+	for (; i < blobs.size(); ++i) {
+		cv::Rect bound = blobs[i]->boundingRect();
+		perimaterSum += (bound.width + bound.height);
+		baseLineSum += bound.y + bound.height;
 	}
-	double perimaterAverg = perimaterSum / bounds.size();
-	double baseLineAverg = baseLineSum / bounds.size();
+	double perimaterAverg = perimaterSum / blobs.size();
+	double baseLineAverg = baseLineSum / blobs.size();
 	i = 0;
 	double rate = 0;
-	while (i < bounds.size()) {
-		rate = (bounds[i].width + bounds[i].height) / perimaterAverg;
-		if (rate < 0.2 || (rate < 0.5 && (bounds[i].y + bounds[i].height) < baseLineAverg * 0.9)) {
+	while (i < blobs.size()) {
+		cv::Rect bound = blobs[i]->boundingRect();
+		rate = (bound.width + bound.height) / perimaterAverg;
+		if (rate < 0.2 || (rate < 0.5 && (bound.y + bound.height) < baseLineAverg * 0.9)) {
 			blobs.erase(blobs.begin() + i);
-			bounds.erase(bounds.begin() + i);
 			labels.erase(labels.begin() + i);
 			continue;
 		}
@@ -160,23 +169,15 @@ void groupVertical(std::vector < std::vector<cv::Point2i> > &blobs, std::vector<
 	}
 }
 
-class VerticalSort {
-private:
-	std::vector<cv::Rect> m_bounds;
-public:
-	VerticalSort(std::vector<cv::Rect> &bounds) : m_bounds(bounds) {}
-	bool operator() (int i, int j) {
-		int centeri = m_bounds[i].x + m_bounds[i].width / 2;
-		int centerj = m_bounds[j].x + m_bounds[j].width / 2;
-		return (centeri < centerj);
-	}
-};
+bool sortByVertical(Blob* blob1, Blob* blob2) {
+	cv::Rect b1 = blob1->boundingRect();
+	cv::Rect b2 = blob2->boundingRect();
+	int center1 = b1.x + b1.width / 2;
+	int center2 = b2.x + b2.width / 2;
+	return (center1 < center2);
+}
 
-void sortBlobsByVertical(std::vector<cv::Rect> &bounds, std::vector<int> &order) {
-	order.resize(bounds.size());
-	for (int i = 0; i < bounds.size(); ++i) {
-		order[i] = i;
-	}
+void sortBlobsByVertical(Blobs &blobs) {
 	//sort
-	sort(order.begin(), order.end(), VerticalSort(bounds));
+	sort(blobs.begin(), blobs.end(), sortByVertical);
 }

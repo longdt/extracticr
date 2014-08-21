@@ -7,7 +7,7 @@
 #include "util/misc.h"
 #include "preprocessor.h"
 
-#define CONFIDENCE_THRESHOLD 0.03
+#define CONFIDENCE_THRESHOLD 0.01
 using namespace tiny_cnn;
 using namespace cv;
 
@@ -44,8 +44,8 @@ cv::Mat makeDigitMat(cv::Mat& crop) {
 	return padded;
 }
 
-cv::Mat makeDigitMat(std::vector<cv::Point2i >& blob, cv::Rect* bound) {
-	cv::Mat crop = cropBlob(blob, *bound);
+cv::Mat makeDigitMat(Blob& blob) {
+	cv::Mat crop = cropBlob(blob);
 	crop = deslant(crop);
 	cropMat(crop, crop);
 	return makeDigitMat(crop);
@@ -253,8 +253,8 @@ std::string recognizeND(Mat& src, double& srcConf) {
 	return val[index];
 }
 
-std::string recognizeDigits(std::vector<cv::Point2i >& blob, cv::Rect& bound, int estDigitWidth, digit_recognizer::result& r) {
-	cv::Mat temp = cropBlob(blob, bound);
+std::string recognizeDigits(Blob& blob, int estDigitWidth, digit_recognizer::result& r) {
+	cv::Mat temp = cropBlob(blob);
 	cv::Mat digit = makeDigitMat(temp);
 	digit_recognizer::result otherResult = recognizer.predict(digit);
 	if (otherResult.conf > r.conf || otherResult.softmaxScore > r.softmaxScore) {
@@ -264,6 +264,7 @@ std::string recognizeDigits(std::vector<cv::Point2i >& blob, cv::Rect& bound, in
 	cropMat(temp, crop, 1);
 //	cropMat(deslant(temp), crop, 1);
 	//guest number digit
+	auto bound = blob.boundingRect();
 	int numDigit = (int) (bound.width /(float) estDigitWidth + 0.4);
 	int width = crop.cols;
 	int height = crop.rows;
@@ -315,28 +316,24 @@ std::string concate(vector<string> strs) {
 	return ss.str();
 }
 
-std::string extractDigit(cv::Mat &binary, std::vector < std::vector<cv::Point2i > >& blobs, std::vector<cv::Rect> &bounds) {
-	std::vector<int> projectV;
-	projectV.resize(binary.cols, 0);
-	vector<int> order;
-	sortBlobsByVertical(bounds, order);
+std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
+	sortBlobsByVertical(blobs);
 	vector<string> labels;
-	labels.resize(order.size());
+	labels.resize(blobs.size());
 	vector<digit_recognizer::result> predRs;
-	int blobIdx = 0;
 	average<int> widthDigit;
+
 	//try recognize sing digit first
-	for (int i = 0; i < order.size(); ++i) {
-		blobIdx = order[i];
-		cv::Mat digit = makeDigitMat(blobs[blobIdx], &bounds[blobIdx]);
+	for (int blobIdx = 0; blobIdx < blobs.size(); ++blobIdx) {
+		cv::Mat digit = makeDigitMat(*blobs[blobIdx]);
 		digit_recognizer::result r = recognizer.predict(digit);
 		predRs.push_back(r);
 		//debug show info
 		imshow(std::to_string(r.label) + "pad" + std::to_string(r.conf) + "*" + std::to_string(r.softmaxScore), digit);
 		if (r.softmaxScore > 0.09) {
-			labels[i] = to_string(r.label);
+			labels[blobIdx] = to_string(r.label);
 			if (r.label != 1) {
-				widthDigit.update(bounds[blobIdx].width);
+				widthDigit.update(blobs[blobIdx]->boundingRect().width);
 			}
 			continue;
 		}
@@ -348,15 +345,14 @@ std::string extractDigit(cv::Mat &binary, std::vector < std::vector<cv::Point2i 
 			continue;
 		}
 		digit_recognizer::result r = predRs[i];
-		blobIdx = order[i];
-		if (isSingleDigit(r.softmaxScore, bounds[blobIdx], widthDigit)) {
+		auto bound = blobs[i]->boundingRect();
+		if (isSingleDigit(r.softmaxScore, bound, widthDigit)) {
 			if (r.conf > CONFIDENCE_THRESHOLD)
 				labels[i] = to_string(r.label);
 		}
-		else if ((labels[i] = recognizeDigits(blobs[blobIdx], bounds[blobIdx], dw, r)).empty()){
+		else if ((labels[i] = recognizeDigits(*blobs[i], dw, r)).empty()){
 			//debug print miss recognize
 			//std::cout << r.label;
-			updateVerticalProjection(blobs[blobIdx], projectV);
 		}
 	}
 	bool reject = false;
@@ -377,10 +373,4 @@ std::string extractDigit(cv::Mat &binary, std::vector < std::vector<cv::Point2i 
 		return "";
 	}
 	return concate(labels);
-	auto cuts = genVerticalCuts(projectV);
-	//draw and show 
-	cv::Scalar color = cv::Scalar(255, 255, 255);
-	for (int c : cuts) {
-		cv::line(binary, cv::Point(c, 0), cv::Point(c, binary.cols), color, 1, 8);
-	}
 }
