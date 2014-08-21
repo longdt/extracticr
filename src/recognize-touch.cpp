@@ -7,7 +7,7 @@
 #include "util/misc.h"
 #include "preprocessor.h"
 
-
+#define CONFIDENCE_THRESHOLD 0.03
 using namespace tiny_cnn;
 using namespace cv;
 
@@ -172,7 +172,7 @@ std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf) {
 	//waitKey(0);
 	double confND2 = confPart2;
 	std::string label2 = recognizeND(cropedPart2, confND2);
-	if (confND2 < confPart2) {
+	if (confND2 < confPart2 || label2.empty()) {
 		confND2 = confPart2;
 		label2 = std::to_string(labelPart2);
 	}
@@ -288,7 +288,10 @@ std::string recognizeDigits(std::vector<cv::Point2i >& blob, cv::Rect& bound, in
 }
 
 
-bool isSingleDigit(double conf, cv::Rect& bound) {
+bool isSingleDigit(double conf, cv::Rect& bound, average<int>& estDigitWidth) {
+	if (estDigitWidth.size() > 0) {
+		return bound.width <= estDigitWidth.mean() + estDigitWidth.deviation();
+	}
 	float aspect = bound.width / (float)(bound.height);
 	if (aspect > 1) {
 		return conf > 0.1;
@@ -346,8 +349,9 @@ std::string extractDigit(cv::Mat &binary, std::vector < std::vector<cv::Point2i 
 		}
 		digit_recognizer::result r = predRs[i];
 		blobIdx = order[i];
-		if (isSingleDigit(r.softmaxScore, bounds[blobIdx])) {
-			labels[i] = to_string(r.label);
+		if (isSingleDigit(r.softmaxScore, bounds[blobIdx], widthDigit)) {
+			if (r.conf > CONFIDENCE_THRESHOLD)
+				labels[i] = to_string(r.label);
 		}
 		else if ((labels[i] = recognizeDigits(blobs[blobIdx], bounds[blobIdx], dw, r)).empty()){
 			//debug print miss recognize
@@ -360,12 +364,12 @@ std::string extractDigit(cv::Mat &binary, std::vector < std::vector<cv::Point2i 
 		if (!labels[i].empty()) {
 			continue;
 		}
-		else if (predRs[i].softmaxScore > 0.0095) {
+		else if (predRs[i].softmaxScore > CONFIDENCE_THRESHOLD) {
 			labels[i] = to_string(predRs[i].label);
 		}
 		else {
 			reject = true;
-			labels[i] = "---" + to_string(predRs[i].label);
+			labels[i] = "-" + to_string(predRs[i].label);
 		}
 	}
 	if (reject) {

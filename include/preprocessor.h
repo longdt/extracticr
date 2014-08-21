@@ -7,12 +7,14 @@
 namespace cv {
 	void doNothing();
 }
-//#define imshow(str, img) doNothing()
+#define imshow(str, img) doNothing()
 //blob
 void findBlobs(const cv::Mat &binary, std::vector < std::vector<cv::Point2i> > &blobs, std::vector<cv::Rect> *bounds = NULL);
 cv::Mat drawBlob(const cv::Mat& src, const std::vector < std::vector<cv::Point2i > >& blobs);
 void groupVertical(std::vector < std::vector<cv::Point2i> > &blobs, std::vector<cv::Rect> &bounds, std::vector<int> &labels);
 void sortBlobsByVertical(std::vector<cv::Rect> &bounds, std::vector<int> &order);
+void defragment(std::vector < std::vector<cv::Point2i> > &blobs, std::vector<cv::Rect> &bounds);
+double distanceBlobs(std::vector<cv::Point2i >& blob1, std::vector<cv::Point2i >& blob2);
 
 
 //dropfall
@@ -25,6 +27,9 @@ void dropfallExtRight(const cv::Mat& src, std::vector<cv::Point2i >& cut, int st
 cv::Mat cropBlob(std::vector<cv::Point2i >& blob, cv::Rect& bound, int pad = 0);
 bool cropMat(cv::Mat& src, cv::Mat& dst, int pad = 0);
 cv::Mat deslant(cv::Mat& input);
+
+void projectHorizontal(cv::Mat& input, std::vector<int>& output);
+cv::Mat cropDigitString(cv::Mat& src);
 
 //@deprecate
 void projectVeritcal(cv::Mat &input, std::vector<int> &output);
