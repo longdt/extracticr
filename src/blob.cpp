@@ -181,3 +181,87 @@ void sortBlobsByVertical(Blobs &blobs) {
 	//sort
 	sort(blobs.begin(), blobs.end(), sortByVertical);
 }
+
+
+#define T_BROKEN_1 3
+#define T_BROKEN_2 0.5
+#define T_GROUPING 0.2
+
+bool isFragment(int strHeight, int median, cv::Rect &bound) {
+	if (bound.y + bound.height < median || bound.y > median) { //if not intersect median
+		return true;
+	}
+	float aboveH = median - bound.y;
+	float belowH = bound.y + bound.height - median;
+	if (std::max(aboveH, belowH) / std::min(aboveH, belowH) > T_BROKEN_1) {
+		return true;
+	}
+	return (bound.height / (float) strHeight) < T_BROKEN_2;
+}
+
+void groupFragment(Blobs &blobs, int idx1, int idx2, int idx3 = -1);
+
+void groupFragment(Blobs &blobs, int idx1, int idx2, int idx3) {
+	Blob* blob1 = blobs[idx1];
+	Blob* blob2 = blobs[idx2];
+	blob1->add(*blob2);
+	delete blob2;
+	blobs.erase(blobs.begin() + idx2);
+
+	if (idx3 != -1) {
+		if (idx3 > idx2) {
+			--idx3;
+		}
+		Blob* blob3 = blobs[idx3];
+		blob1->add(*blob3);
+		delete blob3;
+		blobs.erase(blobs.begin() + idx3);
+	}
+}
+
+void defragment(cv::Mat& strImg, Blobs &blobs) {
+	sortBlobsByVertical(blobs);
+	bool hasBroken = false;
+	int strH = strImg.rows;
+	int median = strH / 2;
+	do {
+		hasBroken = false;
+		for (int i = 0; i < blobs.size(); ++i) {
+			auto bound = blobs[i]->boundingRect();
+			if (!isFragment(strH, median, bound)) {
+				continue;
+			}
+			hasBroken = true;
+			int ccLeft = (i > 0) ? distanceBlobs(*blobs[i], *blobs[i - 1]) : INT_MAX;
+			int ccRight = (i < blobs.size() - 1) ? distanceBlobs(*blobs[i], *blobs[i + 1]) : INT_MAX;
+			if (std::abs(ccLeft - ccRight) / (float) strH < T_GROUPING) {
+				groupFragment(blobs, i - 1, i, i + 1);
+			} else if (ccLeft < ccRight) {
+				groupFragment(blobs, i - 1, i);
+			} else {
+				groupFragment(blobs, i, i + 1);
+			}
+		}
+	} while (hasBroken);
+}
+
+inline double _distance(cv::Point2i p1, cv::Point2i p2) {
+	return sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
+}
+
+double distanceBlobs(std::vector<cv::Point2i >& blob1, std::vector<cv::Point2i >& blob2) {
+	double min = INT_MAX;
+	double temp = 0;
+	for (auto &p1 : blob1) {
+		for (auto &p2 : blob2) {
+			if ((temp = _distance(p1, p2)) < min) {
+				min = temp;
+			}
+		}
+	}
+	return min;
+}
+
+double distanceBlobs(Blob& blob1, Blob& blob2) {
+	return distanceBlobs(blob1.points, blob2.points);
+}
