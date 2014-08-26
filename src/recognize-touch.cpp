@@ -194,7 +194,7 @@ std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf) 
 	if (src.rows / src.cols > 2) {
 		return "";
 	}
-	int start = estDigitWidth.size() == 0 ? (int)(src.cols * 0.375) : estDigitWidth.mean();
+	int start = estDigitWidth.size() == 0 ? (int)(src.cols * 0.375) : 0.8 * estDigitWidth.mean() - estDigitWidth.deviation();
 	if (start > src.rows) {
 		start = src.rows * 0.80;
 	}
@@ -274,7 +274,7 @@ std::string recognizeDigits(Blob& blob, average<int>& estDigitWidth, digit_recog
 //	cropMat(deslant(temp), crop, 1);
 	//guest number digit
 	auto bound = blob.boundingRect();
-	int numDigit = estDigitWidth.size() != 0 ? (int) (bound.width /(float) estDigitWidth.mean() + 2 * estDigitWidth.deviation()) : 0;
+	int numDigit = estDigitWidth.size() != 0 ? (int) (bound.width /(float) estDigitWidth.mean() + 0.5) : 0;
 	int width = crop.cols;
 	int height = crop.rows;
 	float aspect = width /(float) height;
