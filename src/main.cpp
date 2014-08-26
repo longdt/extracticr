@@ -42,14 +42,12 @@ int main(int argc, char **argv)
 	for (vec::const_iterator it(v.begin()), it_end(v.end()); it != it_end && c != 'q'; ++it)
 	{
 		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
-//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/886439-0002-09.png", 0); // force greyscale
+//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/25000-0193-08.png", 0); // force greyscale
 		if (!img.data) {
 			std::cout << "File not found" << std::endl;
 			return -1;
 		}
 		img = 255 - img;
-//		cv::namedWindow("binary");
-//		cv::namedWindow("labelled");
 
 		cv::Mat binary;
 		Blobs blobs;
@@ -60,23 +58,29 @@ int main(int argc, char **argv)
 		findBlobs(binary, blobs);
 		binary = binary * 255;
 		cv::imshow("binary", binary);
+		std::vector<int> labels;
+		groupVertical(blobs, labels);
+//		defragment(binary, blobs);
 		cv::Mat output = drawBlob(binary, blobs);
 		cv::imshow("labelled", output);
 		cv::imshow(it->filename().string(), img);
-		std::vector<int> labels;
-		groupVertical(blobs, labels);
+
 		string actual = extractDigit(binary, blobs);
 		string desire = parse_label(it->filename().string());
 		if (actual.empty()) {
 			++reject;
+#ifdef DEBUG
 			c = cv::waitKey(0);
+#endif
 		}
 		else if (actual.compare(desire) == 0) {
 			++correct;
 		}
 		else {
 			cout << actual << endl;
+#ifdef DEBUG
 			c = cv::waitKey(0);
+#endif
 		}
 		
 		cv::destroyAllWindows();
