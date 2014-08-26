@@ -8,13 +8,14 @@
 #include "preprocessor.h"
 
 #define CONFIDENCE_THRESHOLD 0.01
+#define PROBABLY_SINGLE_DIGIT 0.09
 using namespace tiny_cnn;
 using namespace cv;
 
 
 extern digit_recognizer recognizer;
 
-std::string recognizeND(Mat& src, double& srcConf);
+std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf);
 
 
 cv::Mat makeDigitMat(cv::Mat& crop) {
@@ -57,15 +58,18 @@ void drawCut(Mat& src, vector<Point> &cut) {
 	}
 }
 
-Mat makeCut(Mat& src, vector<Point> &cut) {
-	Mat other = Mat::zeros(src.rows, src.cols, src.type());
+void makeCut(const Mat& src, vector<Point> &cut, Mat& part1, Mat& part2) {
+	part1 = Mat::zeros(src.rows, src.cols, src.type());
+	part2 = Mat::zeros(src.rows, src.cols, src.type());
 	for (auto p : cut) {
-		for (int j = 0; j < p.x; ++j) {
-			other.at<uchar>(p.y, j) = src.at<uchar>(p.y, j);
-			src.at<uchar>(p.y, j) = 0;
+		for (int j = 0; j < src.cols; ++j) {
+			if (j < p.x) {
+				part1.at<uchar>(p.y, j) = src.at<uchar>(p.y, j);
+			} else {
+				part2.at<uchar>(p.y, j) = src.at<uchar>(p.y, j);
+			}
 		}
 	}
-	return other;
 }
 
 int recognize1D(Mat& src, double& conf) {
@@ -77,13 +81,14 @@ int recognize1D(Mat& src, double& conf) {
 }
 
 std::string tryGuest(const Mat& src, vector<Point>& cut, double& conf) {
-	Mat part2 = src.clone();
-	Mat other = makeCut(part2, cut);
+	Mat part2;
+	Mat part1;
+	makeCut(src, cut, part1, part2);
 	Mat temp;
-	if (!cropMat(other, temp) || temp.rows <= src.rows * 0.6) {
+	if (!cropMat(part1, temp) || temp.rows <= src.rows * 0.6) {
 		return "";
 	}
-	other = makeDigitMat(temp);
+	part1 = makeDigitMat(temp);
 	Mat temp2;
 	if (!cropMat(part2, temp2) || temp2.rows <= src.rows * 0.6) {
 		return "";
@@ -95,7 +100,7 @@ std::string tryGuest(const Mat& src, vector<Point>& cut, double& conf) {
 	part2 = makeDigitMat(temp2);
 	vec_t in;
 	double otherConf;
-	mat_to_vect(other, in);
+	mat_to_vect(part1, in);
 	int label = recognizer.predict(in, &otherConf);
 	double conf2;
 	mat_to_vect(part2, in);
@@ -149,9 +154,10 @@ std::string recognize2D(Mat& src, double& srcConf) {
 	return val[index];
 }
 
-std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf) {
-	Mat part2 = src.clone();
-	Mat part1 = makeCut(part2, cut);
+std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf, average<int>& estDW) {
+	Mat part2;
+	Mat part1;
+	makeCut(src, cut, part1, part2);
 	Mat cropedPart1;
 	if (!cropMat(part1, cropedPart1) || cropedPart1.rows <= src.rows * 0.6) {
 		return "";
@@ -171,7 +177,7 @@ std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf) {
 	//imshow("source", src);
 	//waitKey(0);
 	double confND2 = confPart2;
-	std::string label2 = recognizeND(cropedPart2, confND2);
+	std::string label2 = recognizeND(cropedPart2, estDW, confND2);
 	if (confND2 < confPart2 || label2.empty()) {
 		confND2 = confPart2;
 		label2 = std::to_string(labelPart2);
@@ -184,13 +190,13 @@ std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf) {
 	return std::to_string(label) + label2;
 }
 
-std::string recognizeND(Mat& src, double& srcConf) {
+std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf) {
 	if (src.rows / src.cols > 2) {
 		return "";
 	}
-	int start = (int)(src.cols * 0.375);
+	int start = estDigitWidth.size() == 0 ? (int)(src.cols * 0.375) : estDigitWidth.mean();
 	if (start > src.rows) {
-		start = src.rows;
+		start = src.rows * 0.80;
 	}
 	double conf[8];
 	for (int i = 0; i < 8; ++i) {
@@ -200,50 +206,53 @@ std::string recognizeND(Mat& src, double& srcConf) {
 
 	vector<Point> cut;
 	dropfallLeft(src, cut, start, true);
-	val[0] = tryGuestND(src, cut, conf[0]);
+	val[0] = tryGuestND(src, cut, conf[0], estDigitWidth);
 	if (val[0].empty()) {
 		conf[0] = -1;
 	}
 
 	dropfallLeft(src, cut, start, false);
-	val[1] = tryGuestND(src, cut, conf[1]);
+	val[1] = tryGuestND(src, cut, conf[1], estDigitWidth);
 	if (val[1].empty()) {
 		conf[1] = -1;
 	}
 
 	dropfallExtLeft(src, cut, start, true);
-	val[2] = tryGuestND(src, cut, conf[2]);
+	val[2] = tryGuestND(src, cut, conf[2], estDigitWidth);
 	if (val[2].empty()) {
 		conf[2] = -1;
 	}
 
 	dropfallExtLeft(src, cut, start, false);
-	val[3] = tryGuestND(src, cut, conf[3]);
+	val[3] = tryGuestND(src, cut, conf[3], estDigitWidth);
 	if (val[3].empty()) {
 		conf[3] = -1;
 	}
 
-	start = src.cols - 1 - start;
+	start = estDigitWidth.size() > 0 ? estDigitWidth.mean() + estDigitWidth.deviation() : src.cols - 1 - start;
+	if (start > src.rows) {
+		start = src.rows;
+	}
 	dropfallRight(src, cut, start, true);
-	val[4] = tryGuestND(src, cut, conf[4]);
+	val[4] = tryGuestND(src, cut, conf[4], estDigitWidth);
 	if (val[4].empty()) {
 		conf[4] = -1;
 	}
 
 	dropfallRight(src, cut, start, false);
-	val[5] = tryGuestND(src, cut, conf[5]);
+	val[5] = tryGuestND(src, cut, conf[5], estDigitWidth);
 	if (val[5].empty()) {
 		conf[5] = -1;
 	}
 
 	dropfallExtRight(src, cut, start, true);
-	val[6] = tryGuestND(src, cut, conf[6]);
+	val[6] = tryGuestND(src, cut, conf[6], estDigitWidth);
 	if (val[6].empty()) {
 		conf[6] = -1;
 	}
 
 	dropfallExtRight(src, cut, start, false);
-	val[7] = tryGuestND(src, cut, conf[7]);
+	val[7] = tryGuestND(src, cut, conf[7], estDigitWidth);
 	if (val[7].empty()) {
 		conf[7] = -1;
 	}
@@ -253,7 +262,7 @@ std::string recognizeND(Mat& src, double& srcConf) {
 	return val[index];
 }
 
-std::string recognizeDigits(Blob& blob, int estDigitWidth, digit_recognizer::result& r) {
+std::string recognizeDigits(Blob& blob, average<int>& estDigitWidth, digit_recognizer::result& r) {
 	cv::Mat temp = cropBlob(blob);
 	cv::Mat digit = makeDigitMat(temp);
 	digit_recognizer::result otherResult = recognizer.predict(digit);
@@ -265,7 +274,7 @@ std::string recognizeDigits(Blob& blob, int estDigitWidth, digit_recognizer::res
 //	cropMat(deslant(temp), crop, 1);
 	//guest number digit
 	auto bound = blob.boundingRect();
-	int numDigit = (int) (bound.width /(float) estDigitWidth + 0.4);
+	int numDigit = estDigitWidth.size() != 0 ? (int) (bound.width /(float) estDigitWidth.mean() + 2 * estDigitWidth.deviation()) : 0;
 	int width = crop.cols;
 	int height = crop.rows;
 	float aspect = width /(float) height;
@@ -276,12 +285,12 @@ std::string recognizeDigits(Blob& blob, int estDigitWidth, digit_recognizer::res
 		numDigit = 1;
 	} else
 	if (aspect <= 1.8) {
-		std::string val = recognizeND(crop, r.conf);
+		std::string val = recognizeND(crop, estDigitWidth, r.conf);
 		numDigit = 2;
 		return val;
 	}
 	else if (aspect > 1.1) {
-		std::string val = recognizeND(crop, r.conf);
+		std::string val = recognizeND(crop, estDigitWidth, r.conf);
 		numDigit = 3;
 		return val;
 	}
@@ -330,7 +339,7 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 		predRs.push_back(r);
 		//debug show info
 		imshow(std::to_string(r.label) + "pad" + std::to_string(r.conf) + "*" + std::to_string(r.softmaxScore), digit);
-		if (r.softmaxScore > 0.09) {
+		if (r.softmaxScore > PROBABLY_SINGLE_DIGIT) {
 			labels[blobIdx] = to_string(r.label);
 			if (r.label != 1) {
 				widthDigit.update(blobs[blobIdx]->boundingRect().width);
@@ -350,7 +359,7 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 			if (r.conf > CONFIDENCE_THRESHOLD)
 				labels[i] = to_string(r.label);
 		}
-		else if ((labels[i] = recognizeDigits(*blobs[i], dw, r)).empty()){
+		else if ((labels[i] = recognizeDigits(*blobs[i], widthDigit, r)).empty()){
 			//debug print miss recognize
 			//std::cout << r.label;
 		}
