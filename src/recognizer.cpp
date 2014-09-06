@@ -34,6 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "util/cvl_parser.h"
 #include "util/misc.h"
 #include "recognizer.h"
+
+#include "cnn/util.h"
 //#define NOMINMAX
 //#include "imdebug.h"
 
@@ -157,43 +159,10 @@ void digit_recognizer::test() {
 		vec_t in;
 		string file = "pad" + to_string(i) + ".png";
 		load_image(in, file, false);
-		cout << "predict image test" << file << ": " << predict(in, NULL) << endl;
+		cout << "predict image test" << file << ": " << predict(in).label() << endl;
 	}
 	cin.get();
 
-}
-
-label_t digit_recognizer::predict(const vec_t& in, double* conf, double* softmaxScore) {
-	vec_t out;
-	nn.predict(in, &out);
-	double max_val = out[0];
-	int max_index = 0;
-	double sum = 0;
-	for (size_t i = 0; i < out.size(); i++) {
-		if (out[i] > max_val) {
-			max_index = i;
-			max_val = out[i];
-		}
-
-		if (softmaxScore != NULL) {
-			out[i] = exp(3.75 * out[i]);
-			sum += out[i];
-		}
-	}
-	if (conf != NULL) {
-		*conf = max_val;
-	}
-	if (softmaxScore != NULL) {
-		*softmaxScore = out[max_index] / (sum + exp(5));
-	}
-	return max_index;
-}
-
-label_t digit_recognizer::predict(const cv::Mat& digit, double* conf, double* softmaxScore) {
-	assert(digit.cols == 28 && digit.rows == 28);
-	vec_t in;
-	mat_to_vect(digit, in);
-	return predict(in, conf, softmaxScore);
 }
 
 void digit_recognizer::predict(const vec_t& in, vec_t& out) {
@@ -201,13 +170,52 @@ void digit_recognizer::predict(const vec_t& in, vec_t& out) {
 }
 
 digit_recognizer::result digit_recognizer::predict(const vec_t& in) {
-	result r;
-	r.label = predict(in, &r.conf, &r.softmaxScore);
+	result r(nn.out_dim());
+	nn.predict(in, &r.out);
 	return r;
 }
 
-digit_recognizer::result digit_recognizer::predict(const cv::Mat& in) {
-	result r;
-	r.label = predict(in, &r.conf, &r.softmaxScore);
-	return r;
+digit_recognizer::result digit_recognizer::predict(const cv::Mat& digit) {
+	assert(digit.cols == 28 && digit.rows == 28);
+	vec_t in;
+	mat_to_vect(digit, in);
+	return predict(in);
+}
+
+digit_recognizer::result::result(int numLabels) : index(-1), softmaxScoreSum(-1) {
+	softmaxScores.resize(numLabels, -1);
+}
+
+label_t digit_recognizer::result::label() {
+	if (index == -1) {
+		index = tiny_cnn::max_index(out);
+	}
+	return index;
+}
+
+double digit_recognizer::result::confidence() {
+	return out[label()];
+}
+
+double digit_recognizer::result::getSoftmaxScoreSum() {
+	if (softmaxScoreSum == -1) {
+		double sum = 0;
+		for (size_t i = 0; i < out.size(); i++) {
+			sum += exp(3.75 * out[i]);
+		}
+		softmaxScoreSum = sum + exp(5);
+	}
+	return softmaxScoreSum;
+}
+
+double digit_recognizer::result::softmaxScore() {
+	return softmaxScore(label());
+}
+
+double digit_recognizer::result::softmaxScore(label_t idx) {
+	if (softmaxScores[idx] == -1) {
+		double smScoreSum = getSoftmaxScoreSum();
+		softmaxScores[idx] = exp(3.75 * out[idx]) / smScoreSum;
+	}
+	return softmaxScores[idx];
 }

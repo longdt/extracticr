@@ -1,6 +1,6 @@
 #include <string>
 #include <vector>
-#include "util.h"
+#include "cnn/util.h"
 #include <boost/filesystem.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -18,19 +18,7 @@ Mat distort(Mat& src);
 cv::Mat resize(cv::Mat& src, int size);
 
 
-void mat_to_vect(const cv::Mat& input, vec_t &dst) {
-	int x_padding = 2;
-	int y_padding = 2;
-	const int width = input.cols + 2 * x_padding;
-	const int height = input.rows + 2 * y_padding;
-	float scale_min = -1.0;
-	float scale_max = 1.0;
-	dst.resize(width * height, scale_min);
-	for (size_t y = 0; y < input.rows; y++)
-		for (size_t x = 0; x < input.cols; x++)
-			dst[width * (y + y_padding) + x + x_padding]
-			= (input.at<uchar>(y, x) / 255.0) * (scale_max - scale_min) + scale_min;
-}
+void mat_to_vect(const cv::Mat& input, vec_t &dst);
 
 void vect_to_mat(const vec_t &src, cv::Mat& output) {
 	output = Mat::zeros(28, 28, CV_8UC1);
@@ -136,7 +124,8 @@ Mat distort(Mat& src) {
 	/// Apply the Affine Transform just found to the src image
 	warpAffine(src, warp_dst, warp_mat, warp_dst.size());
 	Rect roi(newRows * tag / 2, 0, newCols, newRows);
-	return resize(warp_dst(roi), src.rows);
+	Mat center = warp_dst(roi);
+	return resize(center, src.rows);
 }
 
 
@@ -192,7 +181,7 @@ void distortElastic(const Mat& src, const Mat& dispH, const Mat& dispV, Mat& dst
 	double w1, w2, w3, w4;
 	double sourceValue;
 	int sRow, sCol, sRowp1, sColp1;
-	BOOL bSkipOutOfBounds;
+	bool bSkipOutOfBounds;
 	for (int row = 0; row < src.rows; ++row)
 	{
 		for (int col = 0; col < src.cols; ++col)
@@ -227,15 +216,15 @@ void distortElastic(const Mat& src, const Mat& dispH, const Mat& dispV, Mat& dst
 			while (sourceCol >= m_cCols ) sourceCol -= m_cCols;
 			while (sourceCol < 0 ) sourceCol += m_cCols;
 			*/
-			bSkipOutOfBounds = FALSE;
+			bSkipOutOfBounds = false;
 
-			if ((sourceRow + 1.0) >= src.rows)	bSkipOutOfBounds = TRUE;
-			if (sourceRow < 0)				bSkipOutOfBounds = TRUE;
+			if ((sourceRow + 1.0) >= src.rows)	bSkipOutOfBounds = true;
+			if (sourceRow < 0)				bSkipOutOfBounds = true;
 
-			if ((sourceCol + 1.0) >= src.cols)	bSkipOutOfBounds = TRUE;
-			if (sourceCol < 0)				bSkipOutOfBounds = TRUE;
+			if ((sourceCol + 1.0) >= src.cols)	bSkipOutOfBounds = true;
+			if (sourceCol < 0)				bSkipOutOfBounds = true;
 
-			if (bSkipOutOfBounds == FALSE)
+			if (bSkipOutOfBounds == false)
 			{
 				// the supporting pixels for the "phantom" source pixel are all within the
 				// bounds of the character grid.

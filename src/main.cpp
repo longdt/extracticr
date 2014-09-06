@@ -8,11 +8,14 @@
 #include <random>       // std::default_random_engine
 #include <chrono>
 #include "util/misc.h"
+
+#include "digit-statistic.h"
 using namespace std;
 
 using namespace boost::filesystem;
 
 digit_recognizer recognizer;
+vector<DigitWidthStatistic> digitStatistics;
 
 cv::Mat removeNoise(const cv::Mat& src) {
 	cv::Mat temp(src.size(), src.type()), dst;
@@ -26,6 +29,7 @@ cv::Mat removeNoise(const cv::Mat& src) {
 
 int main(int argc, char **argv)
 {
+	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
 	char c = 0;
 	path p("/media/thienlong/linux/CAR/cvl-strings/train");
 	if (!exists(p) || !is_directory(p)) {
@@ -34,19 +38,20 @@ int main(int argc, char **argv)
 	typedef vector<path> vec;             // store paths,
 	vec v;                                // so we can sort them later
 	copy(directory_iterator(p), directory_iterator(), back_inserter(v));
-	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+//	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 
 //	shuffle(v.begin(), v.end(), std::default_random_engine(seed));
 	int reject = 0;
 	int correct = 0;
 	for (vec::const_iterator it(v.begin()), it_end(v.end()); it != it_end && c != 'q'; ++it)
 	{
-		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
-//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/25000-0193-08.png", 0); // force greyscale
+//		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
+		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/25000-0003-08.png", 0); // force greyscale
 		if (!img.data) {
 			std::cout << "File not found" << std::endl;
 			return -1;
 		}
+		cout << it->filename().string() << ": ";
 		img = 255 - img;
 
 		cv::Mat binary;
@@ -58,9 +63,12 @@ int main(int argc, char **argv)
 		findBlobs(binary, blobs);
 		binary = binary * 255;
 		cv::imshow("binary", binary);
+		cv::Mat thined;
+		thinning(binary, thined);
+		cv::imshow("thinning", thined);
 		std::vector<int> labels;
 		groupVertical(blobs, labels);
-//		defragment(binary, blobs);
+		defragment(binary, blobs);
 		cv::Mat output = drawBlob(binary, blobs);
 		cv::imshow("labelled", output);
 		cv::imshow(it->filename().string(), img);
@@ -75,6 +83,7 @@ int main(int argc, char **argv)
 		}
 		else if (actual.compare(desire) == 0) {
 			++correct;
+			cout << endl;
 		}
 		else {
 			cout << actual << endl;

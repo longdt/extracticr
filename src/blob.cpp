@@ -231,16 +231,18 @@ void defragment(cv::Mat& strImg, Blobs &blobs) {
 			if (!isFragment(strH, median, bound)) {
 				continue;
 			}
-			hasBroken = true;
+
 			int ccLeft = (i > 0) ? distanceBlobs(*blobs[i], *blobs[i - 1]) : INT_MAX;
 			int ccRight = (i < blobs.size() - 1) ? distanceBlobs(*blobs[i], *blobs[i + 1]) : INT_MAX;
 			if (std::abs(ccLeft - ccRight) / (float) strH < T_GROUPING) {
-				groupFragment(blobs, i - 1, i, i + 1);
+				continue;
+//				groupFragment(blobs, i - 1, i, i + 1);
 			} else if (ccLeft < ccRight) {
 				groupFragment(blobs, i - 1, i);
 			} else {
 				groupFragment(blobs, i, i + 1);
 			}
+			hasBroken = true;
 		}
 	} while (hasBroken);
 }

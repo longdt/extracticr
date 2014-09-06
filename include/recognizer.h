@@ -20,14 +20,20 @@ private :
 public:
 	digit_recognizer(bool load_weight = true);
 	~digit_recognizer();
-	label_t predict(const vec_t& in, double* conf, double* softmaxScore = NULL);
-	label_t predict(const cv::Mat& in, double* conf, double* softmaxScore = NULL);
 	void predict(const vec_t& in, vec_t& out);
 	class result {
+	private:
+		label_t index;
+		vec_t softmaxScores;
+		double softmaxScoreSum;
+		double getSoftmaxScoreSum();
 	public:
-		label_t label;
-		double conf;
-		double softmaxScore;
+		explicit result(int numLabels);
+		vec_t out;
+		label_t label();
+		double confidence();
+		double softmaxScore();
+		double softmaxScore(label_t lb);
 	};
 	result predict(const vec_t& in);
 	result predict(const cv::Mat& in);
