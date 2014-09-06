@@ -113,12 +113,15 @@ void thinning(const cv::Mat& src, cv::Mat& dst)
     while (cv::countNonZero(diff) > 0);
 
     dst *= 255;
-	//rethickening
+}
+
+void thicken(cv::Mat& src, cv::Mat& dst) {
 	cv::Mat temp;
+	thinning(src, temp);
+	//rethickening
 	int morph_size = 1;
 	cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2 * morph_size + 1, 2 * morph_size + 1), cv::Point(morph_size, morph_size));
-	cv::morphologyEx(dst, temp, cv::MORPH_DILATE, element);
-	dst = temp;
+	cv::morphologyEx(temp, dst, cv::MORPH_DILATE, element);
 }
 
 

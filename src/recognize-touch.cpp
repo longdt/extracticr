@@ -3,20 +3,24 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <string>
+#include <cmath>
 #include "recognizer.h"
 #include "util/misc.h"
 #include "preprocessor.h"
 
-#define CONFIDENCE_THRESHOLD 0.01
-#define PROBABLY_SINGLE_DIGIT 0.09
+#include "digit-statistic.h"
+
+#define CONFIDENCE_THRESHOLD -1.0f
+#define PROBABLY_SINGLE_DIGIT 0.0999999
 using namespace tiny_cnn;
 using namespace cv;
 
 
 extern digit_recognizer recognizer;
+extern vector<DigitWidthStatistic> digitStatistics;
 
 std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf);
-
+bool isSingleDigit(digit_recognizer::result& predRs, cv::Rect& bound, average<int>& estDigitWidth);
 
 cv::Mat makeDigitMat(cv::Mat& crop) {
 	int width = 0;
@@ -72,48 +76,35 @@ void makeCut(const Mat& src, vector<Point> &cut, Mat& part1, Mat& part2) {
 	}
 }
 
-int recognize1D(Mat& src, double& conf) {
+digit_recognizer::result recognize1D(Mat& src) {
 	auto digitMat = makeDigitMat(src);
 	vec_t in;
 	mat_to_vect(digitMat, in);
-	int label = recognizer.predict(in, &conf);
-	return label;
+	return recognizer.predict(in);
 }
 
 std::string tryGuest(const Mat& src, vector<Point>& cut, double& conf) {
 	Mat part2;
 	Mat part1;
 	makeCut(src, cut, part1, part2);
-	Mat temp;
-	if (!cropMat(part1, temp) || temp.rows <= src.rows * 0.6) {
+	Mat croppedPart1;
+	if (!cropMat(part1, croppedPart1) || croppedPart1.rows <= src.rows * 0.6) {
 		return "";
 	}
-	part1 = makeDigitMat(temp);
-	Mat temp2;
-	if (!cropMat(part2, temp2) || temp2.rows <= src.rows * 0.6) {
+	auto rs1 = recognize1D(croppedPart1);
+	if (rs1.softmaxScore() <= CONFIDENCE_THRESHOLD) {
 		return "";
 	}
-	Mat cutSrc = src.clone();
-	drawCut(cutSrc, cut);
-	imshow("cut source**", cutSrc);
-	imshow("temp", temp2);
-	part2 = makeDigitMat(temp2);
-	vec_t in;
-	double otherConf;
-	mat_to_vect(part1, in);
-	int label = recognizer.predict(in, &otherConf);
-	double conf2;
-	mat_to_vect(part2, in);
-	int label2 = recognizer.predict(in, &conf2);
-	/*imshow(std::to_string(label) + "part1." + std::to_string(otherConf), other);
-	imshow(std::to_string(label2) + "part2." + std::to_string(conf2), part2);
-	imshow("source***", src);
-	waitKey(0);*/
-	if ((otherConf < 0 || conf2 < 0) || (otherConf * conf2 < conf)) {
+	Mat croppedPart2;
+	if (!cropMat(part2, croppedPart2) || croppedPart2.rows <= src.rows * 0.6) {
 		return "";
 	}
-	conf = otherConf * conf2;
-	return std::to_string(label) + std::to_string(label2);
+	auto rs2 = recognize1D(croppedPart2);
+	if (rs2.softmaxScore() <= CONFIDENCE_THRESHOLD || rs1.confidence() * rs2.confidence() < conf) {
+		return "";
+	}
+	conf = rs1.confidence() * rs2.confidence();
+	return std::to_string(rs1.label()) + std::to_string(rs2.label());
 }
 
 std::string recognize2D(Mat& src, double& srcConf) {
@@ -158,36 +149,43 @@ std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf, average
 	Mat part2;
 	Mat part1;
 	makeCut(src, cut, part1, part2);
-	Mat cropedPart1;
-	if (!cropMat(part1, cropedPart1) || cropedPart1.rows <= src.rows * 0.6) {
+//	Mat srcClone = src.clone();
+//	drawCut(srcClone, cut);
+//	cv::destroyAllWindows();
+//	imshow("cut-source", srcClone);
+//	waitKey(0);
+	Mat croppedPart1;
+	if (!cropMat(part1, croppedPart1) || croppedPart1.rows <= src.rows * 0.6) {
 		return "";
 	}
-	double conf1;
-	int label = recognize1D(cropedPart1, conf1);
-	Mat cropedPart2;
-	if (!cropMat(part2, cropedPart2, 1) || cropedPart2.rows <= src.rows * 0.6) {
+	auto rs1 = recognize1D(croppedPart1);
+	if (rs1.softmaxScore() <= CONFIDENCE_THRESHOLD) {
 		return "";
 	}
-	
-	double confPart2;
-	int labelPart2 = recognize1D(cropedPart2, confPart2);
-	//cv::destroyAllWindows();
-	//imshow(std::to_string(label) + "part1." + std::to_string(conf1), cropedPart1);
-	//imshow(std::to_string(labelPart2) + "part2." + std::to_string(confPart2), cropedPart2);
-	//imshow("source", src);
-	//waitKey(0);
-	double confND2 = confPart2;
-	std::string label2 = recognizeND(cropedPart2, estDW, confND2);
-	if (confND2 < confPart2 || label2.empty()) {
-		confND2 = confPart2;
-		label2 = std::to_string(labelPart2);
+	Mat croppedPart2;
+	if (!cropMat(part2, croppedPart2, 1) || croppedPart2.rows <= src.rows * 0.6) {
+		return "";
+	}
+	auto rs2 = recognize1D(croppedPart2);
+//	cv::destroyAllWindows();
+//	imshow(std::to_string(rs1.label()) + "part1." + std::to_string(rs1.confidence()), croppedPart1);
+//	imshow(std::to_string(rs2.label()) + "part2." + std::to_string(rs2.confidence()), croppedPart2);
+//	imshow("source", src);
+//	waitKey(0);
+	cv::Rect bound2 = cv::Rect(0, 0, croppedPart2.cols -1, croppedPart2.rows -1);
+	double confidence2 = isSingleDigit(rs2, bound2, estDW) ? rs2.confidence() : -1;
+	double confND2 = confidence2;
+	std::string label2 = recognizeND(croppedPart2, estDW, confND2);
+	if (confND2 < confidence2 || label2.empty()) {
+		confND2 = confidence2;
+		label2 = std::to_string(rs2.label());
 	}
 
-	if ((conf1 < 0 || confND2 < 0) || (conf1 * confND2 < conf)) {
+	if (confND2 < 0 || (rs1.confidence() * confND2 < conf)) {
 		return "";
 	}
-	conf = conf1 * confND2;
-	return std::to_string(label) + label2;
+	conf = rs1.confidence() * confND2;
+	return std::to_string(rs1.label()) + label2;
 }
 
 std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf) {
@@ -266,7 +264,7 @@ std::string recognizeDigits(Blob& blob, average<int>& estDigitWidth, digit_recog
 	cv::Mat temp = cropBlob(blob);
 	cv::Mat digit = makeDigitMat(temp);
 	digit_recognizer::result otherResult = recognizer.predict(digit);
-	if (otherResult.conf > r.conf || otherResult.softmaxScore > r.softmaxScore) {
+	if (otherResult.confidence() > r.confidence() || otherResult.softmaxScore() > r.softmaxScore()) {
 		r = otherResult;
 	}
 	cv::Mat crop;
@@ -278,19 +276,23 @@ std::string recognizeDigits(Blob& blob, average<int>& estDigitWidth, digit_recog
 	int width = crop.cols;
 	int height = crop.rows;
 	float aspect = width /(float) height;
-	if (numDigit >= 2) {
-		r.conf = -1;
+	double confidence = r.confidence();
+	if (numDigit >= 2 || (numDigit == 0 && aspect > 1.1)) {
+		confidence = -1;
 	}
 	if (aspect <= 0.5 || numDigit == 1) {
 		numDigit = 1;
+		if (r.softmaxScore() > CONFIDENCE_THRESHOLD) {
+			return std::to_string(r.label());
+		}
 	} else
 	if (aspect <= 1.8) {
-		std::string val = recognizeND(crop, estDigitWidth, r.conf);
+		std::string val = recognizeND(crop, estDigitWidth, confidence);
 		numDigit = 2;
 		return val;
 	}
 	else if (aspect > 1.1) {
-		std::string val = recognizeND(crop, estDigitWidth, r.conf);
+		std::string val = recognizeND(crop, estDigitWidth, confidence);
 		numDigit = 3;
 		return val;
 	}
@@ -298,23 +300,32 @@ std::string recognizeDigits(Blob& blob, average<int>& estDigitWidth, digit_recog
 }
 
 
-bool isSingleDigit(double conf, cv::Rect& bound, average<int>& estDigitWidth) {
-	if (estDigitWidth.size() > 0) {
-		return bound.width <= estDigitWidth.mean() + estDigitWidth.deviation();
+bool isSingleDigit(digit_recognizer::result& predRs, cv::Rect& bound, average<int>& estDigitWidth) {
+//	if (estDigitWidth.size() > 0) {
+//		return bound.width <= estDigitWidth.mean() + estDigitWidth.deviation();
+//	}
+//	float aspect = bound.width / (float)(bound.height);
+//	if (aspect > 1) {
+//		return predRs.confidence() > 0.1;
+//	}
+//	else if (aspect >= 0.6) {
+//		return predRs.confidence() > 0.08;
+//	}
+//	else if (aspect >= 0.5) {
+//		return predRs.confidence() > 0.05;
+//	}
+//	else {
+//		return predRs.confidence() > 0.01;
+//	}
+	//other implement
+	double normalWidth = GET_NORMAL_DIGIT_WIDTH(bound.width, bound.height);
+	double score = 0;
+	for (int i = 0; i < predRs.out.size(); ++i) {
+		double tkPI = std::erfc(std::abs(normalWidth - digitStatistics[i].mean) / digitStatistics[i].deviation);
+		score += tkPI * predRs.softmaxScore(i) * 10;
 	}
-	float aspect = bound.width / (float)(bound.height);
-	if (aspect > 1) {
-		return conf > 0.1;
-	}
-	else if (aspect >= 0.6) {
-		return conf > 0.08;
-	}
-	else if (aspect >= 0.5) {
-		return conf > 0.05;
-	}
-	else {
-		return conf > 0.01;
-	}
+	score = score / 10;
+	return score > 0.0025;
 }
 
 std::string concate(vector<string> strs) {
@@ -336,16 +347,16 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 	for (int blobIdx = 0; blobIdx < blobs.size(); ++blobIdx) {
 		cv::Mat digit = makeDigitMat(*blobs[blobIdx]);
 		digit_recognizer::result r = recognizer.predict(digit);
-		predRs.push_back(r);
 		//debug show info
-		imshow(std::to_string(r.label) + "pad" + std::to_string(r.conf) + "*" + std::to_string(r.softmaxScore), digit);
-		if (r.softmaxScore > PROBABLY_SINGLE_DIGIT) {
-			labels[blobIdx] = to_string(r.label);
-			if (r.label != 1) {
+		imshow(std::to_string(r.label()) + "pad" + std::to_string(r.confidence()) + "*" + std::to_string(r.softmaxScore()), digit);
+		auto bound = blobs[blobIdx]->boundingRect();
+		if (r.softmaxScore() > PROBABLY_SINGLE_DIGIT && isSingleDigit(r, bound, widthDigit)) {
+			labels[blobIdx] = to_string(r.label());
+			if (r.label() != 1) {
 				widthDigit.update(blobs[blobIdx]->boundingRect().width);
 			}
-			continue;
 		}
+		predRs.push_back(r);
 	}
 	int dw = widthDigit.size() > 0 ? widthDigit.mean() : -1;
 	//try recognize touching-digit 
@@ -355,9 +366,9 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 		}
 		digit_recognizer::result r = predRs[i];
 		auto bound = blobs[i]->boundingRect();
-		if (isSingleDigit(r.softmaxScore, bound, widthDigit)) {
-			if (r.conf > CONFIDENCE_THRESHOLD)
-				labels[i] = to_string(r.label);
+		if (isSingleDigit(r, bound, widthDigit)) {
+			if (r.confidence() > CONFIDENCE_THRESHOLD)
+				labels[i] = to_string(r.label());
 		}
 		else if ((labels[i] = recognizeDigits(*blobs[i], widthDigit, r)).empty()){
 			//debug print miss recognize
@@ -369,12 +380,12 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 		if (!labels[i].empty()) {
 			continue;
 		}
-		else if (predRs[i].softmaxScore > CONFIDENCE_THRESHOLD) {
-			labels[i] = to_string(predRs[i].label);
-		}
+//		else if (predRs[i].softmaxScore() > CONFIDENCE_THRESHOLD) {
+//			labels[i] = to_string(predRs[i].label());
+//		}
 		else {
 			reject = true;
-			labels[i] = "-" + to_string(predRs[i].label);
+			labels[i] = "-" + to_string(predRs[i].label());
 		}
 	}
 	if (reject) {

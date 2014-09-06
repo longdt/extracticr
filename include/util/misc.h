@@ -32,6 +32,15 @@ public:
 		return devSum / values.size();
 	}
 
+	T sdeviation() {
+		T m = mean();
+		T devSum(0);
+		for (T v : values) {
+			devSum += (m - v) * (m - v);
+		}
+		return sqrt(devSum / (double) values.size());
+	}
+
 	int size() {
 		return values.size();
 	}
