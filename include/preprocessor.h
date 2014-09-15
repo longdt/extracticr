@@ -24,6 +24,7 @@ void dropfallExtRight(const cv::Mat& src, std::vector<cv::Point2i >& cut, int st
 cv::Mat cropBlob(Blob& blob, int pad = 0);
 bool cropMat(cv::Mat& src, cv::Mat& dst, int pad = 0);
 cv::Mat deslant(cv::Mat& input);
+cv::Rect getROI(cv::Mat& src);
 
 void projectHorizontal(cv::Mat& input, std::vector<int>& output);
 cv::Mat cropDigitString(cv::Mat& src);

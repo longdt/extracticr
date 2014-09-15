@@ -28,6 +28,20 @@ cv::Mat cropBlob(Blob& blob, int pad) {
 }
 
 bool cropMat(cv::Mat& src, cv::Mat& dst, int pad) {
+	auto rect = getROI(src);
+	if (rect.width == 0) {
+		return false;
+	}
+	if (pad > 0) {
+		dst = cv::Mat::zeros(rect.height + 2 * pad, rect.width + 2 * pad, src.type());
+		src(rect).copyTo(dst(cv::Rect(pad, pad, rect.width, rect.height)));
+	} else {
+		dst = src(rect);
+	}
+	return true;
+}
+
+cv::Rect getROI(cv::Mat& src) {
 	int minX = src.cols - 1;
 	int maxX = 0;
 	int minY = src.rows - 1;
@@ -52,19 +66,10 @@ bool cropMat(cv::Mat& src, cv::Mat& dst, int pad) {
 	}
 	//handle black iamge
 	if (maxX < minX) {
-		return false;
+		return cv::Rect();
 	}
-	auto rect = cv::Rect(minX, minY, maxX - minX + 1, maxY - minY + 1);
-	if (pad > 0) {
-		dst = cv::Mat::zeros(rect.height + 2 * pad, rect.width + 2 * pad, src.type());
-		src(rect).copyTo(dst(cv::Rect(pad, pad, rect.width, rect.height)));
-	} else {
-		dst = src(rect);
-	}
-	return true;
+	return cv::Rect(minX, minY, maxX - minX + 1, maxY - minY + 1);
 }
-
-
 
 void projectHorizontal(cv::Mat &input, std::vector<int> &output) {
 	output.resize(input.rows);
