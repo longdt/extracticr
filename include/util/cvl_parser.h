@@ -15,7 +15,7 @@ using namespace tiny_cnn;
 
 void load_image(vec_t &dst, string file, bool preprocess = true);
 Mat distort(Mat& src);
-cv::Mat resize(cv::Mat& src, int size);
+cv::Mat resizeAspect(cv::Mat& src, int size);
 
 
 void mat_to_vect(const cv::Mat& input, vec_t &dst);
@@ -125,11 +125,11 @@ Mat distort(Mat& src) {
 	warpAffine(src, warp_dst, warp_mat, warp_dst.size());
 	Rect roi(newRows * tag / 2, 0, newCols, newRows);
 	Mat center = warp_dst(roi);
-	return resize(center, src.rows);
+	return resizeAspect(center, src.rows);
 }
 
 
-cv::Mat resize(cv::Mat& src, int size) {
+cv::Mat resizeAspect(cv::Mat& src, int size) {
 	int width = 0;
 	int height = 0;
 	int paddingX = 0;
