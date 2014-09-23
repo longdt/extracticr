@@ -26,7 +26,8 @@ cv::Mat removeNoise(const cv::Mat& src) {
 	return temp;
 }
 
-
+bool exportSegment = false;
+string filename;
 int main(int argc, char **argv)
 {
 	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
@@ -45,8 +46,8 @@ int main(int argc, char **argv)
 	int correct = 0;
 	for (vec::const_iterator it(v.begin()), it_end(v.end()); it != it_end && c != 'q'; ++it)
 	{
-//		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
-		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/25000-0003-08.png", 0); // force greyscale
+		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
+//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/886439-0002-09.png", 0); // force greyscale
 		if (!img.data) {
 			std::cout << "File not found" << std::endl;
 			return -1;
@@ -78,7 +79,7 @@ int main(int argc, char **argv)
 		if (actual.empty()) {
 			++reject;
 #ifdef DEBUG
-			c = cv::waitKey(0);
+//			c = cv::waitKey(0);
 #endif
 		}
 		else if (actual.compare(desire) == 0) {
@@ -87,6 +88,10 @@ int main(int argc, char **argv)
 		}
 		else {
 			cout << actual << endl;
+//			exportSegment = true;
+//			filename = it->filename().string();
+//			extractDigit(binary, blobs);
+//			exportSegment = false;
 #ifdef DEBUG
 			c = cv::waitKey(0);
 #endif
@@ -94,7 +99,7 @@ int main(int argc, char **argv)
 		
 		cv::destroyAllWindows();
 	}
-	cout << "correct: " << correct << endl << "reject: " << reject << endl << "total: " << v.size() <<endl;
+	cout << "correct: " << correct << endl << "reject: " << reject << endl <<"error: " << (v.size() - correct - reject) << endl << "total: " << v.size() <<endl;
 	cin.get();
 	return 0;
 }

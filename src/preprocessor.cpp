@@ -204,6 +204,7 @@ cv::Mat slant(cv::Mat& src, float degree) {
 }
 
 cv::Mat deslant(cv::Mat& input) {
+//#define projectWidth costSlant
 	int width = projectWidth(input);
 	int minWidth = width;
 	float degree = 0;
@@ -237,6 +238,7 @@ cv::Mat deslant(cv::Mat& input) {
 		continue;
 	}
 	return slant(input, degree);
+//#undef projectWidth
 }
 
 
