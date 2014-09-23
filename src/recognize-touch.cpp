@@ -10,8 +10,8 @@
 
 #include "digit-statistic.h"
 
-#define CONFIDENCE_THRESHOLD -1.0f
-#define PROBABLY_SINGLE_DIGIT 0.0999999
+#define CONFIDENCE_THRESHOLD  0.03
+#define PROBABLY_SINGLE_DIGIT 0.09
 using namespace tiny_cnn;
 using namespace cv;
 
@@ -83,68 +83,6 @@ digit_recognizer::result recognize1D(Mat& src) {
 	return recognizer.predict(in);
 }
 
-std::string tryGuest(const Mat& src, vector<Point>& cut, double& conf) {
-	Mat part2;
-	Mat part1;
-	makeCut(src, cut, part1, part2);
-	Mat croppedPart1;
-	if (!cropMat(part1, croppedPart1) || croppedPart1.rows <= src.rows * 0.6) {
-		return "";
-	}
-	auto rs1 = recognize1D(croppedPart1);
-	if (rs1.softmaxScore() <= CONFIDENCE_THRESHOLD) {
-		return "";
-	}
-	Mat croppedPart2;
-	if (!cropMat(part2, croppedPart2) || croppedPart2.rows <= src.rows * 0.6) {
-		return "";
-	}
-	auto rs2 = recognize1D(croppedPart2);
-	if (rs2.softmaxScore() <= CONFIDENCE_THRESHOLD || rs1.confidence() * rs2.confidence() < conf) {
-		return "";
-	}
-	conf = rs1.confidence() * rs2.confidence();
-	return std::to_string(rs1.label()) + std::to_string(rs2.label());
-}
-
-std::string recognize2D(Mat& src, double& srcConf) {
-	int start = (int) (src.cols * 0.375);
-	vector<Point> cut;
-	dropfallLeft(src, cut, start, true);
-	double conf[4];
-	for (int i = 0; i < 4; ++i) {
-		conf[i] = srcConf;
-	}
-	std::string val[4];
-	val[0] = tryGuest(src, cut, conf[0]);
-	if (val[0].empty()) {
-		conf[0] = -1;
-	}
-
-	dropfallLeft(src, cut, start, false);
-	val[1] = tryGuest(src, cut, conf[1]);
-	if (val[1].empty()) {
-		conf[1] = -1;
-	}
-
-	start = src.cols - 1 - start;
-	dropfallRight(src, cut, start, true);
-	val[2] = tryGuest(src, cut, conf[2]);
-	if (val[2].empty()) {
-		conf[2] = -1;
-	}
-
-	dropfallRight(src, cut, start, false);
-	val[3] = tryGuest(src, cut, conf[3]);
-	if (val[3].empty()) {
-		conf[3] = -1;
-	}
-	auto it = std::max_element(conf, conf + 4);
-	srcConf = *it;
-	int index = it - conf;
-	return val[index];
-}
-
 std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf, average<int>& estDW) {
 	Mat part2;
 	Mat part1;
@@ -159,11 +97,11 @@ std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf, average
 		return "";
 	}
 	auto rs1 = recognize1D(croppedPart1);
-	if (rs1.softmaxScore() <= CONFIDENCE_THRESHOLD) {
+	if (rs1.label() == 10 || rs1.softmaxScore() <= CONFIDENCE_THRESHOLD) {
 		return "";
 	}
 	Mat croppedPart2;
-	if (!cropMat(part2, croppedPart2, 1) || croppedPart2.rows <= src.rows * 0.6) {
+	if (!cropMat(part2, croppedPart2, 1) || croppedPart2.rows <= src.rows * 0.57) {
 		return "";
 	}
 	auto rs2 = recognize1D(croppedPart2);
@@ -175,8 +113,14 @@ std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf, average
 	cv::Rect bound2 = cv::Rect(0, 0, croppedPart2.cols -1, croppedPart2.rows -1);
 	double confidence2 = isSingleDigit(rs2, bound2, estDW) ? rs2.confidence() : -1;
 	double confND2 = confidence2;
-	std::string label2 = recognizeND(croppedPart2, estDW, confND2);
+	std::string label2;
+	if (rs2.label() == 10) {
+		label2 = recognizeND(croppedPart2, estDW, confND2);
+	}
 	if (confND2 < confidence2 || label2.empty()) {
+		if (rs2.label() == 10 || rs2.softmaxScore() <= CONFIDENCE_THRESHOLD) {
+			return "";
+		}
 		confND2 = confidence2;
 		label2 = std::to_string(rs2.label());
 	}
@@ -280,12 +224,12 @@ std::string recognizeDigits(Blob& blob, average<int>& estDigitWidth, digit_recog
 	if (numDigit >= 2 || (numDigit == 0 && aspect > 1.1)) {
 		confidence = -1;
 	}
-	if (aspect <= 0.5 || numDigit == 1) {
-		numDigit = 1;
-		if (r.softmaxScore() > CONFIDENCE_THRESHOLD) {
-			return std::to_string(r.label());
-		}
-	} else
+//	if (aspect <= 0.5 || numDigit == 1) {
+//		numDigit = 1;
+//		if (r.softmaxScore() > CONFIDENCE_THRESHOLD) {
+//			return std::to_string(r.label());
+//		}
+//	} else
 	if (aspect <= 1.8) {
 		std::string val = recognizeND(crop, estDigitWidth, confidence);
 		numDigit = 2;
@@ -318,9 +262,14 @@ bool isSingleDigit(digit_recognizer::result& predRs, cv::Rect& bound, average<in
 //		return predRs.confidence() > 0.01;
 //	}
 	//other implement
+	if (predRs.label() == 10) {
+		return false;
+	} else {
+		return true;
+	}
 	double normalWidth = GET_NORMAL_DIGIT_WIDTH(bound.width, bound.height);
 	double score = 0;
-	for (int i = 0; i < predRs.out.size(); ++i) {
+	for (int i = 0; i < 10; ++i) {
 		double tkPI = std::erfc(std::abs(normalWidth - digitStatistics[i].mean) / digitStatistics[i].deviation);
 		score += tkPI * predRs.softmaxScore(i) * 10;
 	}
@@ -349,6 +298,8 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 		digit_recognizer::result r = recognizer.predict(digit);
 		//debug show info
 		imshow(std::to_string(r.label()) + "pad" + std::to_string(r.confidence()) + "*" + std::to_string(r.softmaxScore()), digit);
+//		digit = 255 - digit;
+//		imwrite("temp/" + std::to_string(r.label()) + "-" + std::to_string(clock()) + ".png", digit);
 		auto bound = blobs[blobIdx]->boundingRect();
 		if (r.softmaxScore() > PROBABLY_SINGLE_DIGIT && isSingleDigit(r, bound, widthDigit)) {
 			labels[blobIdx] = to_string(r.label());
@@ -358,7 +309,6 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 		}
 		predRs.push_back(r);
 	}
-	int dw = widthDigit.size() > 0 ? widthDigit.mean() : -1;
 	//try recognize touching-digit 
 	for (int i = 0; i < labels.size(); ++i) {
 		if (!labels[i].empty()) {
@@ -370,9 +320,8 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 			if (r.confidence() > CONFIDENCE_THRESHOLD)
 				labels[i] = to_string(r.label());
 		}
-		else if ((labels[i] = recognizeDigits(*blobs[i], widthDigit, r)).empty()){
-			//debug print miss recognize
-			//std::cout << r.label;
+		else {
+			labels[i] = recognizeDigits(*blobs[i], widthDigit, r);
 		}
 	}
 	bool reject = false;
