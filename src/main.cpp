@@ -10,6 +10,7 @@
 #include "util/misc.h"
 
 #include "digit-statistic.h"
+#include <iosfwd>
 using namespace std;
 
 using namespace boost::filesystem;
@@ -44,15 +45,17 @@ int main(int argc, char **argv)
 //	shuffle(v.begin(), v.end(), std::default_random_engine(seed));
 	int reject = 0;
 	int correct = 0;
+	ofstream ofs("newMakeDigit.txt");
 	for (vec::const_iterator it(v.begin()), it_end(v.end()); it != it_end && c != 'q'; ++it)
 	{
 		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
-//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/886439-0002-09.png", 0); // force greyscale
+//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/4179248-0152-06.png", 0); // force greyscale
 		if (!img.data) {
 			std::cout << "File not found" << std::endl;
 			return -1;
 		}
-		cout << it->filename().string() << ": ";
+		filename = it->filename().string();
+		cout << filename << ": ";
 		img = 255 - img;
 
 		cv::Mat binary;
@@ -60,7 +63,7 @@ int main(int argc, char **argv)
 		cv::threshold(img, binary, 0.0, 1.0, cv::THRESH_BINARY | CV_THRESH_OTSU);
 //		binary = removeNoise(binary);
 		binary = cropDigitString(binary);
-		binary = deslant(binary);
+		float angle = deslant(binary, &binary);
 		findBlobs(binary, blobs);
 		binary = binary * 255;
 		cv::imshow("binary", binary);
@@ -74,22 +77,22 @@ int main(int argc, char **argv)
 		cv::imshow("labelled", output);
 		cv::imshow(it->filename().string(), img);
 
-		string actual = extractDigit(binary, blobs);
+		string actual = extractDigit(binary, blobs, angle);
 		string desire = parse_label(it->filename().string());
 		if (actual.empty()) {
 			++reject;
 #ifdef DEBUG
-//			c = cv::waitKey(0);
+ 			c = cv::waitKey(0);
 #endif
 		}
 		else if (actual.compare(desire) == 0) {
+			ofs << filename << endl;
 			++correct;
 			cout << endl;
 		}
 		else {
 			cout << actual << endl;
 //			exportSegment = true;
-//			filename = it->filename().string();
 //			extractDigit(binary, blobs);
 //			exportSegment = false;
 #ifdef DEBUG
@@ -99,6 +102,7 @@ int main(int argc, char **argv)
 		
 		cv::destroyAllWindows();
 	}
+	ofs.close();
 	cout << "correct: " << correct << endl << "reject: " << reject << endl <<"error: " << (v.size() - correct - reject) << endl << "total: " << v.size() <<endl;
 	cin.get();
 	return 0;
