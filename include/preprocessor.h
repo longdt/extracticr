@@ -8,7 +8,7 @@
 namespace cv {
 	void doNothing();
 }
-#define DEBUG
+//#define DEBUG
 #ifndef DEBUG
 #define imshow(str, img) doNothing()
 #endif
@@ -23,7 +23,9 @@ void dropfallExtRight(const cv::Mat& src, std::vector<cv::Point2i >& cut, int st
 //preprocessing
 cv::Mat cropBlob(Blob& blob, int pad = 0);
 bool cropMat(cv::Mat& src, cv::Mat& dst, int pad = 0);
-cv::Mat deslant(cv::Mat& input);
+cv::Mat slant(cv::Mat& src, float degree);
+float deslant(cv::Mat& input, cv::Mat *dst = NULL);
+float resolveBlobAngle(Blob& blob, int imgHeight, float imgSlantAngle);
 cv::Rect getROI(cv::Mat& src);
 
 void projectHorizontal(cv::Mat& input, std::vector<int>& output);
@@ -41,7 +43,7 @@ void thinning(const cv::Mat& src, cv::Mat& dst);
 //recognize-touch
 cv::Mat makeDigitMat(cv::Mat& crop);
 cv::Mat makeDigitMat(Blob& blob);
-std::string extractDigit(cv::Mat &binary, Blobs& blobs);
+std::string extractDigit(cv::Mat &binary, Blobs& blobs, float slantAngle);
 std::string recognizeDigits(Blob& blob, int estDigitWidth, digit_recognizer::result& r);
 
 #endif

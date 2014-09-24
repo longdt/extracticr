@@ -203,7 +203,20 @@ cv::Mat slant(cv::Mat& src, float degree) {
 	return warp_dst;
 }
 
-cv::Mat deslant(cv::Mat& input) {
+float resolveBlobAngle(Blob& blob, int imgHeight, float imgSlantAngle) {
+	double tag = tan(abs(imgSlantAngle) * PI / 180.0);
+	float blobMove = 0;
+	auto rect = blob.boundingRect();
+	if (imgSlantAngle > 0) {
+		blobMove = tag * (rect.y + rect.height);
+	} else {
+		blobMove = tag * (rect.y - imgHeight);
+	}
+	float result = atan(blobMove / rect.height) * 180 / PI;
+	return result;
+}
+
+float deslant(cv::Mat& input, cv::Mat *dst) {
 //#define projectWidth costSlant
 	int width = projectWidth(input);
 	int minWidth = width;
@@ -212,7 +225,7 @@ cv::Mat deslant(cv::Mat& input) {
 	cv::Mat rotated;
 	//try rotate +/-5degree
 	int step = 16;
-	while (step != 0 && (degree <= 45 || degree <= -45)) {
+	while (step != 0 && (degree <= 48 && degree >= -48)) {
 		rotated = slant(input, degree + step);
 		width = projectWidth(rotated);
 		if (width < minWidth) {
@@ -237,7 +250,10 @@ cv::Mat deslant(cv::Mat& input) {
 		stepDegree = degree;
 		continue;
 	}
-	return slant(input, degree);
+	if (dst != NULL && degree != 0) {
+		*dst = slant(input, degree);
+	}
+	return degree;
 //#undef projectWidth
 }
 

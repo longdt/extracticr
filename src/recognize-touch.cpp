@@ -49,9 +49,26 @@ cv::Mat makeDigitMat(cv::Mat& crop) {
 	return padded;
 }
 
-cv::Mat makeDigitMat(Blob& blob) {
-	cv::Mat crop = cropBlob(blob);
-	crop = deslant(crop);
+cv::Mat blobToMat(Blob& blob) {
+	cv::Rect bound = blob.boundingRect();
+	cv::Mat rs = cv::Mat::zeros(bound.y + bound.height, bound.width, CV_8UC1);
+	for (size_t j = 0; j < blob.points.size(); j++) {
+		int x = blob.points[j].x - bound.x;
+		int y = blob.points[j].y;
+		rs.at<uchar>(y, x) = 255;
+	}
+	return rs;
+}
+
+cv::Mat makeDigitMat(Blob& blob, float slantAngle) {
+	cv::Mat crop = blobToMat(blob);
+	float angle = deslant(crop);
+	if (slantAngle * angle > 0) {
+		angle = abs(angle + slantAngle) > 48 ? 0 : angle;
+	}
+	if (angle != 0) {
+		crop = slant(crop, angle);
+	}
 	cropMat(crop, crop);
 	return makeDigitMat(crop);
 }
@@ -140,6 +157,9 @@ std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf) 
 	if (start > src.rows) {
 		start = src.rows * 0.80;
 	}
+	if (start >= src.cols) {
+		return "";
+	}
 	double conf[8];
 	for (int i = 0; i < 8; ++i) {
 		conf[i] = srcConf;
@@ -174,6 +194,9 @@ std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf) 
 	start = estDigitWidth.size() > 0 ? estDigitWidth.mean() + estDigitWidth.deviation() : src.cols - 1 - start;
 	if (start > src.rows) {
 		start = src.rows;
+	}
+	if (start >= src.cols) {
+		return "";
 	}
 	dropfallRight(src, cut, start, true);
 	val[4] = tryGuestND(src, cut, conf[4], estDigitWidth);
@@ -285,7 +308,7 @@ std::string concate(vector<string> strs) {
 	return ss.str();
 }
 
-std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
+std::string extractDigit(cv::Mat &binary, Blobs& blobs, float slantAngle) {
 	sortBlobsByVertical(blobs);
 	vector<string> labels;
 	labels.resize(blobs.size());
@@ -294,7 +317,7 @@ std::string extractDigit(cv::Mat &binary, Blobs& blobs) {
 
 	//try recognize sing digit first
 	for (int blobIdx = 0; blobIdx < blobs.size(); ++blobIdx) {
-		cv::Mat digit = makeDigitMat(*blobs[blobIdx]);
+		cv::Mat digit = makeDigitMat(*blobs[blobIdx], slantAngle);
 		digit_recognizer::result r = recognizer.predict(digit);
 		//debug show info
 		imshow(std::to_string(r.label()) + "pad" + std::to_string(r.confidence()) + "*" + std::to_string(r.softmaxScore()), digit);
