@@ -62,7 +62,7 @@ cv::Mat blobToMat(Blob& blob) {
 
 cv::Mat makeDigitMat(Blob& blob, float slantAngle) {
 	cv::Mat crop = blobToMat(blob);
-	float angle = deslant(crop);
+	float angle = deslant(crop, NULL, projectWidth);
 	if (slantAngle * angle > 0) {
 		angle = abs(angle + slantAngle) > 48 ? 0 : angle;
 	}
@@ -114,6 +114,7 @@ std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf, average
 		return "";
 	}
 	auto rs1 = recognize1D(croppedPart1);
+//	imwrite("temp/" + std::to_string(rs1.label()) + std::to_string(clock()) + "-part1.png", 255 - makeDigitMat(croppedPart1));
 	if (rs1.label() == 10 || rs1.softmaxScore() <= CONFIDENCE_THRESHOLD) {
 		return "";
 	}
@@ -122,6 +123,7 @@ std::string tryGuestND(const Mat& src, vector<Point>& cut, double& conf, average
 		return "";
 	}
 	auto rs2 = recognize1D(croppedPart2);
+//	imwrite("temp/" + std::to_string(rs2.label()) + std::to_string(clock()) + "-part2.png", 255 - makeDigitMat(croppedPart2));
 //	cv::destroyAllWindows();
 //	imshow(std::to_string(rs1.label()) + "part1." + std::to_string(rs1.confidence()), croppedPart1);
 //	imshow(std::to_string(rs2.label()) + "part2." + std::to_string(rs2.confidence()), croppedPart2);

@@ -19,6 +19,7 @@ public:
 	cv::Rect boundingRect();
 	void add(const Blob& other);
 	void add(const cv::Point2i& point);
+	void setModify(bool flag);
 };
 
 typedef std::vector <Blob* > Blobs;

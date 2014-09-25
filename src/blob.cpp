@@ -20,6 +20,9 @@ void Blob::add(const cv::Point2i& point) {
 	points.push_back(point);
 }
 
+void Blob::setModify(bool flag) {
+	needNewRect = flag;
+}
 
 Blobs findBlobs(const cv::Mat &binary) {
 	Blobs blobs;

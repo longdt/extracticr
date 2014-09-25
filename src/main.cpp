@@ -45,11 +45,11 @@ int main(int argc, char **argv)
 //	shuffle(v.begin(), v.end(), std::default_random_engine(seed));
 	int reject = 0;
 	int correct = 0;
-	ofstream ofs("newMakeDigit.txt");
+	ofstream ofs("oldMakeDigit.txt");
 	for (vec::const_iterator it(v.begin()), it_end(v.end()); it != it_end && c != 'q'; ++it)
 	{
 		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
-//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/4179248-0152-06.png", 0); // force greyscale
+//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/135579-0025-10.png", 0); // force greyscale
 		if (!img.data) {
 			std::cout << "File not found" << std::endl;
 			return -1;

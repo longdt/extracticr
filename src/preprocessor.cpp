@@ -147,8 +147,8 @@ std::vector<int> genVerticalCuts(std::vector<int>& projectV) {
 }
 
 
-int projectWidth(cv::Mat& input) {
-	int width = 0;
+float projectWidth(cv::Mat& input) {
+	float width = 0;
 	for (int i = 0; i < input.cols; ++i) {
 		for (int j = 0; j < input.rows; ++j) {
 			if (input.at<uchar>(j, i) > 0) {
@@ -161,13 +161,13 @@ int projectWidth(cv::Mat& input) {
 }
 
 
-int costSlant(cv::Mat& input) {
-	cv::Mat temp = input / 255;
-	Blobs blobs = findBlobs(temp);
-	int cost = 0;
+float blobsWidth(cv::Mat& input) {
+	Blobs blobs = findBlobs(input);
+	float cost = 0;
 	for (auto b : blobs) {
 		cost += b->boundingRect().width;
 	}
+	cost = projectWidth(input) * 0.8 + cost * 0.2;
 	return cost;
 }
 
@@ -215,11 +215,10 @@ float resolveBlobAngle(Blob& blob, int imgHeight, float imgSlantAngle) {
 	float result = atan(blobMove / rect.height) * 180 / PI;
 	return result;
 }
-
-float deslant(cv::Mat& input, cv::Mat *dst) {
-//#define projectWidth costSlant
-	int width = projectWidth(input);
-	int minWidth = width;
+/* input[0,1] output[0,1] */
+float deslant(cv::Mat& input, cv::Mat *dst, float (*fntSlantCost)(cv::Mat&)) {
+	float width = fntSlantCost(input);
+	float minWidth = width;
 	float degree = 0;
 	float stepDegree = degree;
 	cv::Mat rotated;
@@ -227,7 +226,7 @@ float deslant(cv::Mat& input, cv::Mat *dst) {
 	int step = 16;
 	while (step != 0 && (degree <= 48 && degree >= -48)) {
 		rotated = slant(input, degree + step);
-		width = projectWidth(rotated);
+		width = fntSlantCost(rotated);
 		if (width < minWidth) {
 			minWidth = width;
 			degree += step;
@@ -240,7 +239,7 @@ float deslant(cv::Mat& input, cv::Mat *dst) {
 		}
 		step = -step;
 		rotated = slant(input, degree + step);
-		width = projectWidth(rotated);
+		width = fntSlantCost(rotated);
 		if (width < minWidth) {
 			minWidth = width;
 			degree += step;
@@ -254,9 +253,59 @@ float deslant(cv::Mat& input, cv::Mat *dst) {
 		*dst = slant(input, degree);
 	}
 	return degree;
-//#undef projectWidth
 }
 
+/*implement new deslant function*/
+void slant(Blob& b, float tagAngle) {
+	for (auto &p : b.points) {
+		p.x += p.y * tagAngle;
+	}
+}
+
+float slantCost(Blobs& blobs, float angle) {
+	float bcost = 0;
+	float widCost = 0;
+	for (Blob* b : blobs) {
+		slant(*b, angle);
+	}
+}
+
+float deslant(Blobs& blobs) {
+	int cost = slantCost(blobs, 0);
+	int minCost = cost;
+	float degree = 0;
+	float stepDegree = degree;
+	//try rotate +/-5degree
+	int step = 16;
+	while (step != 0 && (degree <= 48 && degree >= -48)) {
+		cost = slantCost(blobs, degree + step);
+		if (cost < minCost) {
+			minCost = cost;
+			degree += step;
+			continue;
+		}
+		else if (degree != stepDegree) {
+			step = step / 2;
+			stepDegree = degree;
+			continue;
+		}
+		step = -step;
+		cost = slantCost(blobs, degree + step);
+		if (cost < minCost) {
+			minCost = cost;
+			degree += step;
+			continue;
+		}
+		step = step / 2;
+		stepDegree = degree;
+		continue;
+	}
+	if (degree != 0) {
+		slant(blobs, degree);
+	}
+	return degree;
+}
+/*end implement new deslant function*/
 
 cv::Mat cropDigitString(cv::Mat& src) {
 	vector<int> horizontal;
