@@ -24,7 +24,12 @@ void dropfallExtRight(const cv::Mat& src, std::vector<cv::Point2i >& cut, int st
 cv::Mat cropBlob(Blob& blob, int pad = 0);
 bool cropMat(cv::Mat& src, cv::Mat& dst, int pad = 0);
 cv::Mat slant(cv::Mat& src, float degree);
-float deslant(cv::Mat& input, cv::Mat *dst = NULL);
+float projectWidth(cv::Mat& input);
+float blobsWidth(cv::Mat& input);
+/* input[0,1] output[0,1] */
+float deslant(cv::Mat& input, cv::Mat *dst = NULL, float (*fntSlantCost)(cv::Mat&) = projectWidth);
+/* need implementing*/
+float deslant(Blobs& blobs);
 float resolveBlobAngle(Blob& blob, int imgHeight, float imgSlantAngle);
 cv::Rect getROI(cv::Mat& src);
 
