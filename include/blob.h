@@ -26,8 +26,8 @@ typedef std::vector <Blob* > Blobs;
 void findBlobs(const cv::Mat &binary, Blobs &blobs);
 Blobs findBlobs(const cv::Mat &binary);
 void clearBlobs(Blobs &blobs);
-
-cv::Mat drawBlob(const cv::Mat& src, const Blobs& blobs);
+cv::Rect boundingRect(Blobs &blobs);
+cv::Mat drawBlob(const Blobs& blobs);
 //@deprecase. Use defragment instead of
 void groupVertical(Blobs& blobs, std::vector<int> &labels);
 void sortBlobsByVertical(Blobs &blobs);

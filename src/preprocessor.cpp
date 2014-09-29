@@ -184,7 +184,7 @@ cv::Mat slant(cv::Mat& src, float degree) {
 	srcTri[0] = Point2f(0, 0);
 	srcTri[1] = Point2f(src.cols - 1.f, 0);
 	srcTri[2] = Point2f(0, src.rows - 1.f);
-	double tag = tan(abs(degree) * PI / 180.0);
+	double tag = tan(std::abs(degree) * PI / 180.0);
 	if (degree > 0) {
 		dstTri[0] = Point2f(0, 0);
 		dstTri[1] = Point2f(src.cols - 1, 0);
@@ -204,7 +204,7 @@ cv::Mat slant(cv::Mat& src, float degree) {
 }
 
 float resolveBlobAngle(Blob& blob, int imgHeight, float imgSlantAngle) {
-	double tag = tan(abs(imgSlantAngle) * PI / 180.0);
+	double tag = tan(std::abs(imgSlantAngle) * PI / 180.0);
 	float blobMove = 0;
 	auto rect = blob.boundingRect();
 	if (imgSlantAngle > 0) {
@@ -256,29 +256,71 @@ float deslant(cv::Mat& input, cv::Mat *dst, float (*fntSlantCost)(cv::Mat&)) {
 }
 
 /*implement new deslant function*/
-void slant(Blob& b, float tagAngle) {
-	for (auto &p : b.points) {
-		p.x += p.y * tagAngle;
+
+void genSlantShiftX(float angle, int imgHeight, std::vector<int>& moveX) {
+	moveX.resize(imgHeight);
+	double tag = tan(std::abs(angle) * PI / 180.0);
+	int x = 0;
+	double error = 0;
+	int increasement = angle >= 0 ? 1 : -1;
+	for (int y = 0; y < imgHeight; ++y) {
+		moveX[y] = x;
+		error += tag;
+		if (error >= 0.5) {
+			x += increasement;
+			--error;
+		}
 	}
 }
 
-float slantCost(Blobs& blobs, float angle) {
+void slant(int imgHeight, Blobs& blobs, float angle) {
+	std::vector<int> moveX;
+	genSlantShiftX(angle, imgHeight, moveX);
+	int padding = angle >= 0 ? 0 : -moveX[imgHeight - 1];
+	for (Blob* b : blobs) {
+		for (auto &p : b->points) {
+			p.x += moveX[p.y] + padding;
+		}
+		b->setModify(true);
+	}
+}
+
+float slantCost(Size imgSize, Blobs& blobs, float angle) {
 	float bcost = 0;
 	float widCost = 0;
+	std::vector<int> moveX;
+	genSlantShiftX(angle, imgSize.height, moveX);
+	int padding = angle >= 0 ? 0 : -moveX[imgSize.height - 1];
+	int newWidth = imgSize.width + std::abs(moveX[imgSize.height - 1]);
+	std::vector<bool> pwImg(newWidth, false);
+	int newX = 0;
 	for (Blob* b : blobs) {
-		slant(*b, angle);
+		std::vector<bool> pwBlob(newWidth, false);
+		for (auto &p : b->points) {
+			newX = p.x + moveX[p.y] + padding;
+			if (!pwImg[newX]) {
+				pwImg[newX] = true;
+				pwBlob[newX] = true;
+				++widCost;
+				++bcost;
+			} else if (!pwBlob[newX]) {
+				pwBlob[newX] = true;
+				++bcost;
+			}
+		}
 	}
+	return widCost * 0.8 + bcost * 0.2;
 }
 
-float deslant(Blobs& blobs) {
-	int cost = slantCost(blobs, 0);
+float deslant(Size imgSize, Blobs& blobs) {
+	int cost = slantCost(imgSize, blobs, 0);
 	int minCost = cost;
 	float degree = 0;
 	float stepDegree = degree;
 	//try rotate +/-5degree
 	int step = 16;
 	while (step != 0 && (degree <= 48 && degree >= -48)) {
-		cost = slantCost(blobs, degree + step);
+		cost = slantCost(imgSize, blobs, degree + step);
 		if (cost < minCost) {
 			minCost = cost;
 			degree += step;
@@ -290,7 +332,7 @@ float deslant(Blobs& blobs) {
 			continue;
 		}
 		step = -step;
-		cost = slantCost(blobs, degree + step);
+		cost = slantCost(imgSize, blobs, degree + step);
 		if (cost < minCost) {
 			minCost = cost;
 			degree += step;
@@ -301,7 +343,7 @@ float deslant(Blobs& blobs) {
 		continue;
 	}
 	if (degree != 0) {
-		slant(blobs, degree);
+		slant(imgSize.height, blobs, degree);
 	}
 	return degree;
 }

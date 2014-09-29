@@ -45,17 +45,18 @@ int main(int argc, char **argv)
 //	shuffle(v.begin(), v.end(), std::default_random_engine(seed));
 	int reject = 0;
 	int correct = 0;
-	ofstream ofs("oldMakeDigit.txt");
+	ofstream ofs("missing.txt");
 	for (vec::const_iterator it(v.begin()), it_end(v.end()); it != it_end && c != 'q'; ++it)
 	{
-		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
-//		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/135579-0025-10.png", 0); // force greyscale
+//		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
+		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/5841077-0005-04.png", 0); // force greyscale
 		if (!img.data) {
 			std::cout << "File not found" << std::endl;
 			return -1;
 		}
 		filename = it->filename().string();
 		cout << filename << ": ";
+		cout.flush();
 		img = 255 - img;
 
 		cv::Mat binary;
@@ -63,8 +64,11 @@ int main(int argc, char **argv)
 		cv::threshold(img, binary, 0.0, 1.0, cv::THRESH_BINARY | CV_THRESH_OTSU);
 //		binary = removeNoise(binary);
 		binary = cropDigitString(binary);
-		float angle = deslant(binary, &binary);
 		findBlobs(binary, blobs);
+		float angle = deslant(binary.size(), blobs); //deslant(binary, &binary); //
+		cv::Mat output = drawBlob(blobs);
+		cv::imshow("labelled", output);
+//		cv::waitKey(0);
 		binary = binary * 255;
 		cv::imshow("binary", binary);
 		cv::Mat thined;
@@ -72,9 +76,8 @@ int main(int argc, char **argv)
 		cv::imshow("thinning", thined);
 		std::vector<int> labels;
 		groupVertical(blobs, labels);
-		defragment(binary, blobs);
-		cv::Mat output = drawBlob(binary, blobs);
-		cv::imshow("labelled", output);
+		defragment(output, blobs);
+
 		cv::imshow(it->filename().string(), img);
 
 		string actual = extractDigit(binary, blobs, angle);
@@ -99,7 +102,7 @@ int main(int argc, char **argv)
 			c = cv::waitKey(0);
 #endif
 		}
-		
+		clearBlobs(blobs);
 		cv::destroyAllWindows();
 	}
 	ofs.close();
