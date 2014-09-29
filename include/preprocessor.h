@@ -8,7 +8,7 @@
 namespace cv {
 	void doNothing();
 }
-//#define DEBUG
+#define DEBUG
 #ifndef DEBUG
 #define imshow(str, img) doNothing()
 #endif
@@ -27,9 +27,9 @@ cv::Mat slant(cv::Mat& src, float degree);
 float projectWidth(cv::Mat& input);
 float blobsWidth(cv::Mat& input);
 /* input[0,1] output[0,1] */
-float deslant(cv::Mat& input, cv::Mat *dst = NULL, float (*fntSlantCost)(cv::Mat&) = projectWidth);
+float deslant(cv::Mat& input, cv::Mat *dst = NULL, float (*fntSlantCost)(cv::Mat&) = blobsWidth);
 /* need implementing*/
-float deslant(Blobs& blobs);
+float deslant(cv::Size imgSize, Blobs& blobs);
 float resolveBlobAngle(Blob& blob, int imgHeight, float imgSlantAngle);
 cv::Rect getROI(cv::Mat& src);
 

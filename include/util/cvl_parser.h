@@ -103,7 +103,7 @@ Mat distort(Mat& src) {
 	srcTri[1] = Point2f(src.cols - 1.f, 0);
 	srcTri[2] = Point2f(0, src.rows - 1.f);
 	double degree = MAX_ROTATION * UNIFORM_PLUS_MINUS_ONE;
-	double tag = tan(abs(degree) * PI / 180.0);
+	double tag = tan(std::abs(degree) * PI / 180.0);
 	int newRows = src.rows + src.rows * MAX_HEIGHT_SCALE * UNIFORM_PLUS_MINUS_ONE;
 	int newCols = src.cols + src.cols * MAX_WIDTH_SCALE * UNIFORM_PLUS_MINUS_ONE;
 	/// Set the dst image the same type and size as src

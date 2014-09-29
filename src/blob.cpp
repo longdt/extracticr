@@ -76,8 +76,34 @@ void clearBlobs(Blobs &blobs) {
 	blobs.clear();
 }
 
-cv::Mat drawBlob(const cv::Mat& src, const Blobs& blobs) {
-	cv::Mat output = cv::Mat::zeros(src.size(), CV_8UC3);
+#define MAX_INT 2147483648
+
+cv::Rect boundingRect(const Blobs &blobs) {
+	int minX = MAX_INT;
+	int minY = MAX_INT;
+	int maxX = 0;
+	int maxY = 0;
+	for (Blob* b : blobs) {
+		auto rect = b->boundingRect();
+		if (minX > rect.x) {
+			minX = rect.x;
+		}
+		if (minY > rect.y) {
+			minY = rect.y;
+		}
+		if (maxX < rect.x + rect.width) {
+			maxX = rect.x + rect.width;
+		}
+		if (maxY < rect.y + rect.height) {
+			maxY = rect.y + rect.height;
+		}
+	}
+	return maxX == 0 ? cv::Rect() : cv::Rect(minX, minY, maxX - minX, maxY - minY);
+}
+
+cv::Mat drawBlob(const Blobs& blobs) {
+	cv::Rect rect = boundingRect(blobs);
+	cv::Mat output = cv::Mat::zeros(rect.y + rect.height, rect.x + rect.width, CV_8UC3);
 	// Randomy color the blobs
 	for (size_t i = 0; i < blobs.size(); i++) {
 		unsigned char r = 255 * (rand() / (1.0 + RAND_MAX));
