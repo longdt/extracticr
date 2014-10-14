@@ -5,6 +5,7 @@
 #include <opencv2/core/core.hpp>
 #include "recognizer.h"
 #include "blob.h"
+
 namespace cv {
 	void doNothing();
 }
@@ -12,7 +13,9 @@ namespace cv {
 #ifndef DEBUG
 #define imshow(str, img) doNothing()
 #endif
-
+//threshold
+enum class BhThresholdMethod{OTSU, NIBLACK, SAUVOLA, WOLFJOLION};
+void doThreshold(cv::InputArray src, cv::OutputArray dst, const BhThresholdMethod &method);
 
 //dropfall
 void dropfallLeft(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);
@@ -35,6 +38,7 @@ cv::Rect getROI(cv::Mat& src);
 
 void projectHorizontal(cv::Mat& input, std::vector<int>& output);
 cv::Mat cropDigitString(cv::Mat& src);
+void drawCut(cv::Mat& src, std::vector<cv::Point> &cut);
 
 //@deprecate
 void projectVeritcal(cv::Mat &input, std::vector<int> &output);
