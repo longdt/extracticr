@@ -1,18 +1,131 @@
 /*
- * bfground-segment.cpp
+ * BFSegment.cpp
  *
- *  Created on: Sep 6, 2014
+ *  Created on: Sep 30, 2014
  *      Author: thienlong
  */
 
-#include <opencv2/opencv.hpp>
-#include <vector>
-
-#include "opencv2/core/core.hpp"
+#include <BFSegment.h>
+#include <opencv2/highgui/highgui.hpp>
 
 #include "preprocessor.h"
 
-using namespace cv;
+void findSEPoint(const Mat& thinned, Point& start, Point& end);
+void foregroundTFP(Mat& thinned, Point start, Point end, vector<Point>& output);
+void foregroundBFP(Mat& thinned, Point start, Point end, vector<Point>& output);
+void backgroundTFP(Mat& src, vector<Point>& output);
+void backgroundBFP(Mat& src, vector<Point>& output);
+
+BFSegment::BFSegment(Mat& binImg) : binImg(binImg) {
+	Mat temp = binImg / 255;
+	Blobs blobs = findBlobs(temp);
+	broken = blobs.size() != 1;
+}
+
+void BFSegment::genFPLayers() {
+	if (broken) {
+		return;
+	}
+	Mat fgSkeleton;
+	thinning(binImg, fgSkeleton);
+	imshow("skeleton", fgSkeleton);
+	Point start, end;
+	findSEPoint(fgSkeleton, start, end);
+	backgroundTFP(binImg, fpLayers[0]);
+	foregroundTFP(fgSkeleton, start, end, fpLayers[1]);
+	foregroundBFP(fgSkeleton, start, end, fpLayers[2]);
+	backgroundBFP(binImg, fpLayers[3]);
+}
+
+
+#define ALPHA 0.25
+int findMatch(Point p, vector<Point> fps, int index, int maxDigitWidth, int blobHeight) {
+	for (; index < fps.size(); ++index) {
+		if (fps[index].x > maxDigitWidth) {
+			break;
+		} else if (std::abs(fps[index].x - p.x) <= ALPHA * blobHeight) {
+			return index;
+		}
+	}
+	return -1;
+}
+
+void genVertCut(Point p, int row, vector<Point>& cut) {
+	int minY = std::min(p.y, row);
+	int maxY = std::max(p.y, row);
+	for (int i = minY; i <= maxY; ++i) {
+		cut.push_back(Point(p.x, i));
+	}
+}
+
+void genVertCut(int x, int blobHeight, vector<Point>& cut) {
+	for (int i = 0; i < blobHeight; ++i) {
+		cut.push_back(Point(x, i));
+	}
+}
+
+void genP2PCut(Point pStart, Point pEnd, vector<Point>& cut) {
+	int x0 = pStart.x;
+	int y0 = pStart.y;
+	int x1 = pEnd.x;
+	int y1 = pEnd.y;
+	int dx = abs(x1-x0), sx = x0<x1 ? 1 : -1;
+	  int dy = abs(y1-y0), sy = y0<y1 ? 1 : -1;
+	  int err = (dx>dy ? dx : -dy)/2, e2;
+
+	  for(;;){
+	    cut.push_back(Point(x0,y0));
+	    if (x0==x1 && y0==y1) break;
+	    e2 = err;
+	    if (e2 >-dx) { err -= dy; x0 += sx; }
+	    if (e2 < dy) { err += dx; y0 += sy; }
+	  }
+}
+
+void BFSegment::genCutPath(Point p, vector<Point>& cut, int layerIdx, int maxDigitWidth, vector<vector<Point> >& cutPaths, bool down) {
+	int layerIdxEnd = down ? 4 : -1;
+	int incrLayerIdx = down ? 1 : -1;
+	int index = 0;
+	bool noMore = (layerIdx == layerIdxEnd) || (index = findMatch(p, fpLayers[layerIdx], 0, maxDigitWidth, binImg.rows)) == -1;
+	if (noMore) {
+		int rowIdx = down ? binImg.rows - 1 : 0;
+		vector<Point> newCut(cut.begin(), cut.end());
+		genVertCut(p, rowIdx, newCut);
+		cutPaths.push_back(newCut);
+		return;
+	}
+	auto& fps = fpLayers[layerIdx];
+	do {
+		vector<Point> newCut(cut.begin(), cut.end());
+		genP2PCut(p, fps[index], newCut);
+		genCutPath(fps[index], newCut, layerIdx + incrLayerIdx, maxDigitWidth, cutPaths, down);
+		index = findMatch(p, fps, index + 1, maxDigitWidth, binImg.rows);
+	} while (index != -1);
+}
+
+void BFSegment::genCutPath(int maxDigitWidth, vector<vector<Point> >& cutPaths, bool down) {
+	//downward path searching
+	int layerIdx = down ? 0 : 3;
+	int incrLayerIdx = down ? 1 : -1;
+	int rowIdx = down ? 0 : binImg.rows - 1;
+	for (Point p : fpLayers[layerIdx]) {
+		if (p.x > maxDigitWidth) {
+			break;
+		}
+		vector<Point> cut;
+		genVertCut(p, rowIdx, cut);
+		genCutPath(p, cut, layerIdx + incrLayerIdx, maxDigitWidth, cutPaths, down);
+	}
+}
+
+void BFSegment::genCutPath(int maxDigitWidth, vector<vector<Point>>& cutPaths) {
+	genCutPath(maxDigitWidth, cutPaths, true);
+	genCutPath(maxDigitWidth, cutPaths, false);
+}
+
+BFSegment::~BFSegment() {
+}
+
 
 void findSEPoint(const Mat& src, Point& start, Point& end) {
 	//find start point
@@ -253,7 +366,7 @@ Point findFP(vector<Point> whiteTrack, int ipIdx) {
 	return Point(x, y);
 }
 
-void foregroundTFP(Mat& cc, Mat& thinned, Point start, Point end, vector<Point>& output) {
+void foregroundTFP(Mat& thinned, Point start, Point end, vector<Point>& output) {
 	Point whiteMove = start;
 	Point blackMove(start.x -1, start.y);
 	vector<Point> blackTrack;
@@ -276,7 +389,7 @@ void foregroundTFP(Mat& cc, Mat& thinned, Point start, Point end, vector<Point>&
 	}
 }
 
-void foregroundBFP(Mat& cc, Mat& thinned, Point start, Point end, vector<Point>& output) {
+void foregroundBFP(Mat& thinned, Point start, Point end, vector<Point>& output) {
 	Point whiteMove = start;
 	Point blackMove(start.x -1, start.y);
 	vector<Point> blackTrack;
@@ -315,8 +428,8 @@ bool isEndPoint(Mat& src, int r, int c) {
 }
 
 void findEndPoint(Mat& thinned, vector<Point>& output) {
-	for (int c = 0; c < thinned.cols; ++c) {
-		for (int r = 0; r < thinned.rows; ++r) {
+	for (int c = 1; c < thinned.cols - 1; ++c) {
+		for (int r = 1; r < thinned.rows - 1; ++r) {
 			if (isEndPoint(thinned, r, c)) {
 				output.push_back(Point(c, r));
 			}
@@ -338,6 +451,7 @@ void backgroundTFP(Mat& src, vector<Point>& output) {
 		}
 	}
 	thinning(bgTop, bgTop);
+	imshow("bgtop", bgTop);
 	findEndPoint(bgTop, output);
 }
 
@@ -354,8 +468,42 @@ void backgroundBFP(Mat& src, vector<Point>& output) {
 			}
 		}
 	}
+//	bgBot.col(0).setTo(Scalar(0));
+//	bgBot.col(src.cols - 1).setTo(Scalar(0));
 	thinning(bgBot, bgBot);
+	imshow("bgbot", bgBot);
 	findEndPoint(bgBot, output);
+//	output.erase(output.begin());
+//	output.pop_back();
 }
 
+#include <opencv2/opencv.hpp>
+int bfmain()
+{
+	cv::Mat src = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/25000-0164-08.png");
+	if (!src.data)
+		return -1;
 
+	cv::Mat bw, binary;
+	cv::cvtColor(src, bw, CV_BGR2GRAY);
+//	src = cv::Scalar::all(255) -src;
+	cv::threshold(bw, binary, 10, 255, CV_THRESH_OTSU | CV_THRESH_BINARY_INV);
+	cv::Rect roi = getROI(binary);
+	Mat cropB = binary(roi);
+	int padding = 1;
+	cv::copyMakeBorder(cropB, binary, padding, padding, padding , padding, BORDER_CONSTANT, cv::Scalar(0));
+	cv::imshow("binary", binary);
+	BFSegment segmenter(binary);
+	segmenter.genFPLayers();
+	vector<vector<Point>> cuts;
+	segmenter.genCutPath(binary.rows, cuts);
+	for (auto cut : cuts) {
+		Mat srcClone = binary.clone();
+		drawCut(srcClone, cut);
+		//	cv::destroyAllWindows();
+		imshow("cut-source" + std::to_string(clock()), srcClone);
+	}
+	cv::imshow("src", binary);
+	cv::waitKey();
+	return 0;
+}
