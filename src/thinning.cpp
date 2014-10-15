@@ -127,15 +127,11 @@ void thicken(cv::Mat& src, cv::Mat& dst) {
 }
 
 using namespace cv;
-void findSEPoint(const Mat& thinned, Point& start, Point& end);
-void foregroundTFP(Mat& cc, Mat& thinned, Point start, Point end, vector<Point>& output);
-void foregroundBFP(Mat& cc, Mat& thinned, Point start, Point end, vector<Point>& output);
-void backgroundTFP(Mat& src, vector<Point>& output);
-void backgroundBFP(Mat& src, vector<Point>& output);
+
 /**
  * This is an example on how to call the thinning funciton above
  */
-int test_main()
+int thinning_main()
 {
 	cv::Mat src = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/25000-0003-08.png");
 	if (!src.data)
@@ -150,24 +146,8 @@ int test_main()
 	int paddingY = cropB.rows * 0.1;
 	cv::copyMakeBorder(cropB, binary, paddingY, paddingY, 0 , 0, BORDER_CONSTANT, cv::Scalar(0));
 	cv::imshow("binary", binary);
-	bw = binary;
-	thinning(bw, bw);
+	thinning(binary, bw);
 	cv::imshow("dst", bw);
-	cv::Point start, end;
-	findSEPoint(bw, start, end);
-	vector<Point> output;
-	foregroundTFP(bw, bw, start, end, output);
-	foregroundBFP(bw, bw, start, end, output);
-
-	backgroundTFP(binary, output);
-	backgroundBFP(binary, output);
-	int thickness = -1;
-	int lineType = 8;
-	for (auto p : output) {
-		circle( binary, p, 1, Scalar( 100), thickness, lineType );
-		circle( binary, p, 1, Scalar(100), thickness, lineType );
-	}
-	cv::imshow("src", binary);
 	cv::waitKey();
 	return 0;
 }

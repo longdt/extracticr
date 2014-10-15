@@ -24,6 +24,40 @@ void Blob::setModify(bool flag) {
 	needNewRect = flag;
 }
 
+Blobs::Blobs() {}
+
+size_t Blobs::size() const {
+	return blobs.size();
+}
+
+void Blobs::erase(int index) {
+	Blob* b = blobs[index];
+	delete b;
+	blobs.erase(blobs.begin() + index);
+}
+
+Blob* Blobs::operator[] (int index) const {
+	return blobs[index];
+}
+
+void Blobs::sort(bool (*compFunct)(Blob* blob1, Blob* blob2)) {
+	std::sort(blobs.begin(), blobs.end(), compFunct);
+}
+
+void Blobs::add(Blob* blob) {
+	blobs.push_back(blob);
+}
+
+void Blobs::clear() {
+	for (Blob* blob : blobs) {
+		delete blob;
+	}
+	blobs.clear();
+}
+Blobs::~Blobs() {
+	clear();
+}
+
 Blobs findBlobs(const cv::Mat &binary) {
 	Blobs blobs;
 	findBlobs(binary, blobs);
@@ -31,7 +65,7 @@ Blobs findBlobs(const cv::Mat &binary) {
 }
 
 void findBlobs(const cv::Mat &binary, Blobs &blobs) {
-	clearBlobs(blobs);
+	blobs.clear();
 	// Fill the label_image with the blobs
 	// 0  - background
 	// 1  - unlabelled foreground
@@ -63,27 +97,21 @@ void findBlobs(const cv::Mat &binary, Blobs &blobs) {
 					blob->add(cv::Point2i(j, i));
 				}
 			}
-			blobs.push_back(blob);
+			blobs.add(blob);
 			label_count++;
 		}
 	}
 }
 
-void clearBlobs(Blobs &blobs) {
-	for (Blob* blob : blobs) {
-		delete blob;
-	}
-	blobs.clear();
-}
-
-#define MAX_INT 2147483648
+#define MAX_INT 0xfffffff
 
 cv::Rect boundingRect(const Blobs &blobs) {
 	int minX = MAX_INT;
 	int minY = MAX_INT;
 	int maxX = 0;
 	int maxY = 0;
-	for (Blob* b : blobs) {
+	for (int i = 0; i < blobs.size(); ++i) {
+		Blob* b = blobs[i];
 		auto rect = b->boundingRect();
 		if (minX > rect.x) {
 			minX = rect.x;
@@ -147,7 +175,7 @@ public:
 
 
 void groupVertical(Blobs& blobs, std::vector<int> &labels) {
-	cv::partition(blobs, labels, DisjointDigit());
+	blobs.partition(labels, DisjointDigit());
 	//join group
 	for (int label = 0; label < labels.size(); ++label) {
 		//find first blob of label
@@ -166,7 +194,7 @@ void groupVertical(Blobs& blobs, std::vector<int> &labels) {
 		while (i < labels.size()) {
 			if (labels[i] == label) {
 				blob->add(*blobs[i]);
-				blobs.erase(blobs.begin() + i);
+				blobs.erase(i);
 				labels.erase(labels.begin() + i);
 				continue;
 			}
@@ -190,7 +218,7 @@ void groupVertical(Blobs& blobs, std::vector<int> &labels) {
 		cv::Rect bound = blobs[i]->boundingRect();
 		rate = (bound.width + bound.height) / perimaterAverg;
 		if (rate < 0.2 || (rate < 0.5 && (bound.y + bound.height) < baseLineAverg * 0.9)) {
-			blobs.erase(blobs.begin() + i);
+			blobs.erase(i);
 			labels.erase(labels.begin() + i);
 			continue;
 		}
@@ -208,7 +236,7 @@ bool sortByVertical(Blob* blob1, Blob* blob2) {
 
 void sortBlobsByVertical(Blobs &blobs) {
 	//sort
-	sort(blobs.begin(), blobs.end(), sortByVertical);
+	blobs.sort(sortByVertical);
 }
 
 
@@ -234,8 +262,7 @@ void groupFragment(Blobs &blobs, int idx1, int idx2, int idx3) {
 	Blob* blob1 = blobs[idx1];
 	Blob* blob2 = blobs[idx2];
 	blob1->add(*blob2);
-	delete blob2;
-	blobs.erase(blobs.begin() + idx2);
+	blobs.erase(idx2);
 
 	if (idx3 != -1) {
 		if (idx3 > idx2) {
@@ -243,8 +270,7 @@ void groupFragment(Blobs &blobs, int idx1, int idx2, int idx3) {
 		}
 		Blob* blob3 = blobs[idx3];
 		blob1->add(*blob3);
-		delete blob3;
-		blobs.erase(blobs.begin() + idx3);
+		blobs.erase(idx3);
 	}
 }
 
@@ -263,10 +289,11 @@ void defragment(cv::Mat& strImg, Blobs &blobs) {
 
 			int ccLeft = (i > 0) ? distanceBlobs(*blobs[i], *blobs[i - 1]) : INT_MAX;
 			int ccRight = (i < blobs.size() - 1) ? distanceBlobs(*blobs[i], *blobs[i + 1]) : INT_MAX;
-			if (std::abs(ccLeft - ccRight) / (float) strH < T_GROUPING) {
-				continue;
-//				groupFragment(blobs, i - 1, i, i + 1);
-			} else if (ccLeft < ccRight) {
+//			if (std::abs(ccLeft - ccRight) / (float) strH < T_GROUPING) {
+//				continue;
+////				groupFragment(blobs, i - 1, i, i + 1);
+//			} else
+				if (ccLeft < ccRight) {
 				groupFragment(blobs, i - 1, i);
 			} else {
 				groupFragment(blobs, i, i + 1);
