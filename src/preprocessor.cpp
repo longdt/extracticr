@@ -398,7 +398,8 @@ float projectWidth(cv::Mat& input) {
 float blobsWidth(cv::Mat& input) {
 	Blobs blobs = findBlobs(input);
 	float cost = 0;
-	for (auto b : blobs) {
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		Blob* b = blobs[i];
 		cost += b->boundingRect().width;
 	}
 	cost = projectWidth(input) * 0.8 + cost * 0.2;
@@ -511,7 +512,8 @@ void slant(int imgHeight, Blobs& blobs, float angle) {
 	std::vector<int> moveX;
 	genSlantShiftX(angle, imgHeight, moveX);
 	int padding = angle >= 0 ? 0 : -moveX[imgHeight - 1];
-	for (Blob* b : blobs) {
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		Blob* b = blobs[i];
 		for (auto &p : b->points) {
 			p.x += moveX[p.y] + padding;
 		}
@@ -528,7 +530,8 @@ float slantCost(Size imgSize, Blobs& blobs, float angle) {
 	int newWidth = imgSize.width + std::abs(moveX[imgSize.height - 1]);
 	std::vector<bool> pwImg(newWidth, false);
 	int newX = 0;
-	for (Blob* b : blobs) {
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		Blob* b = blobs[i];
 		std::vector<bool> pwBlob(newWidth, false);
 		for (auto &p : b->points) {
 			newX = p.x + moveX[p.y] + padding;

@@ -1,4 +1,5 @@
 
+#include <BFSegment.h>
 #include <algorithm>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -155,6 +156,23 @@ std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf) 
 	if (src.rows / src.cols > 2) {
 		return "";
 	}
+	BFSegment segmenter(src);
+	segmenter.genFPLayers();
+	vector<vector<Point>> cuts;
+	segmenter.genCutPath(src.rows, cuts);
+	vector<string> labels(cuts.size());
+	vector<double> confidens(cuts.size(), -1);
+	for (int i = 0; i < cuts.size(); ++i) {
+		labels[i] = tryGuestND(src, cuts[i], confidens[i], estDigitWidth);
+	}
+	int bestIdx = std::max_element(confidens.begin(), confidens.end()) - confidens.begin();
+	if (!cuts.empty() && confidens[bestIdx] > srcConf && !labels[bestIdx].empty()) {
+		srcConf = confidens[bestIdx];
+		return labels[bestIdx];
+	}
+//	else {
+//		return "";
+//	}
 	int start = estDigitWidth.size() == 0 ? (int)(src.cols * 0.375) : 0.8 * estDigitWidth.mean() - estDigitWidth.deviation();
 	if (start > src.rows) {
 		start = src.rows * 0.80;
@@ -245,7 +263,7 @@ std::string recognizeDigits(Blob& blob, average<int>& estDigitWidth, digit_recog
 	int width = crop.cols;
 	int height = crop.rows;
 	float aspect = width /(float) height;
-	double confidence = r.confidence();
+	double confidence = r.label() == 10 ? -1 : r.confidence();
 	if (numDigit >= 2 || (numDigit == 0 && aspect > 1.1)) {
 		confidence = -1;
 	}

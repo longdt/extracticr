@@ -29,7 +29,7 @@ cv::Mat removeNoise(const cv::Mat& src) {
 
 bool exportSegment = false;
 string filename;
-int main(int argc, char **argv)
+int mmain(int argc, char **argv)
 {
 	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
 	char c = 0;
@@ -45,11 +45,11 @@ int main(int argc, char **argv)
 //	shuffle(v.begin(), v.end(), std::default_random_engine(seed));
 	int reject = 0;
 	int correct = 0;
-	ofstream ofs("missing.txt");
+	ofstream ofs("newSegment.txt");
 	for (vec::const_iterator it(v.begin()), it_end(v.end()); it != it_end && c != 'q'; ++it)
 	{
 //		cv::Mat img = cv::imread(it->string(), 0); // force greyscale
-		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/train/5841077-0005-04.png", 0); // force greyscale
+		cv::Mat img = cv::imread("/media/thienlong/linux/CAR/cvl-strings/car 6.png", 0); // force greyscale
 		if (!img.data) {
 			std::cout << "File not found" << std::endl;
 			return -1;
@@ -71,9 +71,6 @@ int main(int argc, char **argv)
 //		cv::waitKey(0);
 		binary = binary * 255;
 		cv::imshow("binary", binary);
-		cv::Mat thined;
-		thinning(binary, thined);
-		cv::imshow("thinning", thined);
 		std::vector<int> labels;
 		groupVertical(blobs, labels);
 		defragment(output, blobs);
@@ -92,6 +89,7 @@ int main(int argc, char **argv)
 			ofs << filename << endl;
 			++correct;
 			cout << endl;
+			c = cv::waitKey(0);
 		}
 		else {
 			cout << actual << endl;
@@ -102,7 +100,6 @@ int main(int argc, char **argv)
 			c = cv::waitKey(0);
 #endif
 		}
-		clearBlobs(blobs);
 		cv::destroyAllWindows();
 	}
 	ofs.close();
