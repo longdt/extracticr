@@ -33,6 +33,7 @@ public:
 	void clear();
 	void sort(bool (*compFunct)(Blob* blob1, Blob* blob2));
 	void add(Blob* blob);
+	void clone(Blobs& other) const;
 	template<class _EqPredicate> void partition(std::vector<int>& label, _EqPredicate predicate=_EqPredicate()) {
 		cv::partition(blobs, label, predicate);
 	}
@@ -40,7 +41,6 @@ public:
 };
 /*binary image [0, 1]*/
 void findBlobs(const cv::Mat &binary, Blobs &blobs);
-Blobs findBlobs(const cv::Mat &binary);
 cv::Rect boundingRect(const Blobs &blobs);
 cv::Mat drawBlob(const Blobs& blobs);
 //@deprecase. Use defragment instead of

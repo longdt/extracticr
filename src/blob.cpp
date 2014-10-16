@@ -48,6 +48,13 @@ void Blobs::add(Blob* blob) {
 	blobs.push_back(blob);
 }
 
+void Blobs::clone(Blobs& other) const {
+	other.clear();
+	for (Blob* b : blobs) {
+		other.add(new Blob(*b));
+	}
+}
+
 void Blobs::clear() {
 	for (Blob* blob : blobs) {
 		delete blob;
@@ -56,12 +63,6 @@ void Blobs::clear() {
 }
 Blobs::~Blobs() {
 	clear();
-}
-
-Blobs findBlobs(const cv::Mat &binary) {
-	Blobs blobs;
-	findBlobs(binary, blobs);
-	return blobs;
 }
 
 void findBlobs(const cv::Mat &binary, Blobs &blobs) {

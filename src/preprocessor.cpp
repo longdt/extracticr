@@ -396,7 +396,8 @@ float projectWidth(cv::Mat& input) {
 
 
 float blobsWidth(cv::Mat& input) {
-	Blobs blobs = findBlobs(input);
+	Blobs blobs;
+	findBlobs(input, blobs);
 	float cost = 0;
 	for (size_t i = 0; i < blobs.size(); ++i) {
 		Blob* b = blobs[i];

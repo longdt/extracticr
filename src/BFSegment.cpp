@@ -18,7 +18,8 @@ void backgroundBFP(Mat& src, vector<Point>& output);
 
 BFSegment::BFSegment(Mat& binImg) : binImg(binImg) {
 	Mat temp = binImg / 255;
-	Blobs blobs = findBlobs(temp);
+	Blobs blobs;
+	findBlobs(temp, blobs);
 	broken = blobs.size() != 1;
 }
 
