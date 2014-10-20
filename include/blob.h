@@ -45,6 +45,7 @@ cv::Rect boundingRect(const Blobs &blobs);
 cv::Mat drawBlob(const Blobs& blobs);
 //@deprecase. Use defragment instead of
 void groupVertical(Blobs& blobs, std::vector<int> &labels);
+bool sortByVertical(Blob* blob1, Blob* blob2);
 void sortBlobsByVertical(Blobs &blobs);
 void defragment(cv::Mat& strImg, Blobs &blobs);
 double distanceBlobs(Blob& blob1, Blob& blob2);

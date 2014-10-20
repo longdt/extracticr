@@ -318,7 +318,7 @@ void projectHorizontal(cv::Mat &input, std::vector<int> &output) {
 	}
 }
 
-void projectVeritcal(cv::Mat &input, std::vector<int> &output) {
+void projectVertical(cv::Mat &input, std::vector<int> &output) {
 	output.resize(input.cols);
 	for (int i = 0; i < input.cols; ++i) {
 		int sum = 0;
@@ -331,10 +331,11 @@ void projectVeritcal(cv::Mat &input, std::vector<int> &output) {
 	}
 }
 
-void projectVeritcal(std::vector < std::vector<cv::Point2i> > &blobPoints, std::vector<int> &output) {
+void projectVertical(Blobs &blobs, std::vector<int> &output) {
 	std::fill(output.begin(), output.end(), 0);
-	for (auto blob : blobPoints) {
-		for (auto p : blob) {
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		Blob* b = blobs[i];
+		for (auto p : b->points) {
 			output[p.x] += 1;
 		}
 	}
