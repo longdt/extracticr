@@ -41,8 +41,8 @@ cv::Mat cropDigitString(cv::Mat& src);
 void drawCut(cv::Mat& src, std::vector<cv::Point> &cut);
 
 //@deprecate
-void projectVeritcal(cv::Mat &input, std::vector<int> &output);
-void projectVeritcal(std::vector < std::vector<cv::Point2i> > &blobPoints, std::vector<int> &output);
+void projectVertical(cv::Mat &input, std::vector<int> &output);
+void projectVertical(Blobs &blobs, std::vector<int> &output);
 void updateVerticalProjection(std::vector<cv::Point2i>& blobPoints, std::vector<int>& output);
 std::vector<int> genVerticalCuts(std::vector<int>& projectV);
 
