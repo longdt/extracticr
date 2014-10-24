@@ -328,7 +328,7 @@ std::string concate(vector<string> strs) {
 	return ss.str();
 }
 
-std::string extractDigit(cv::Mat &binary, Blobs& blobs, float slantAngle) {
+std::string extractDigit(Blobs& blobs, float slantAngle) {
 	sortBlobsByVertical(blobs);
 	vector<string> labels;
 	labels.resize(blobs.size());

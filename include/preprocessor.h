@@ -52,7 +52,7 @@ void thinning(const cv::Mat& src, cv::Mat& dst);
 //recognize-touch
 cv::Mat makeDigitMat(cv::Mat& crop);
 cv::Mat makeDigitMat(Blob& blob);
-std::string extractDigit(cv::Mat &binary, Blobs& blobs, float slantAngle);
+std::string extractDigit(Blobs& blobs, float slantAngle);
 std::string recognizeDigits(Blob& blob, int estDigitWidth, digit_recognizer::result& r);
 
 #endif

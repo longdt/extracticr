@@ -36,7 +36,6 @@ cv::Rect CARLocator::getCARLocation() {
 	Mat img = this->cheqImg(roi);
 	Mat edges;
 	Canny(img, edges, 80, 120);
-	imshow("edges", edges);
 	std::vector<cv::Vec4i> lines;
 	HoughLinesP(edges, lines, 1, CV_PI/ 2, 50, 50, 10 );
 	Rect mpr = getMPRLocation();
@@ -115,7 +114,7 @@ cv::Rect CARLocator::getRMLocation(Blobs& blobs) {
 			--i;
 		}
 	}
-	Rect rs = boundingRect(blobs);
+	Rect rs = blobs.boundingRect();
 	return rs;
 }
 
@@ -123,7 +122,7 @@ cv::Rect CARLocator::getRMLocation(Blobs& blobs) {
 
 
 void trimNoises(Blobs& blobs) {
-	Rect rect = boundingRect(blobs);
+	Rect rect = blobs.boundingRect();
 	vector<int> projectV(rect.x + rect.width, 0);
 	projectVertical(blobs, projectV);
 	//find big space
@@ -188,15 +187,16 @@ void CARLocator::getHandwrittenBlobs(Blobs& blobs) {
 		blobs[i]->boundingRect();
 	}
 	blobs.clone(rmBlobs);
+	Rect box = getCARLocation();
 	Rect rm = getRMLocation(rmBlobs);
 	int startX = rm.x + rm.width;
-	Rect box = getCARLocation();
+	int endX = box.x + box.width;
 	//get only blob inside box
 	for (size_t i = 0; i < blobs.size(); ++i) {
 		Blob* b = blobs[i];
 		Rect rect = b->boundingRect();
 		Point center(rect.x + rect.width / 2, rect.y + rect.height / 2);
-		if (!isInside(box, center) || rect.x <= startX || rect.width >= box.height) {
+		if (!isInside(box, center) || rect.x <= startX || rect.width >= box.height || rect.x + rect.width > endX) {
 			blobs.erase(i);
 			--i;
 		}

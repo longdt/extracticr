@@ -15,8 +15,7 @@ using namespace std;
 
 using namespace boost::filesystem;
 
-digit_recognizer recognizer;
-vector<DigitWidthStatistic> digitStatistics;
+
 
 cv::Mat removeNoise(const cv::Mat& src) {
 	cv::Mat temp(src.size(), src.type()), dst;
@@ -31,7 +30,6 @@ bool exportSegment = false;
 string filename;
 int mmain(int argc, char **argv)
 {
-	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
 	char c = 0;
 	path p("/media/thienlong/linux/CAR/cvl-strings/train");
 	if (!exists(p) || !is_directory(p)) {
@@ -77,7 +75,7 @@ int mmain(int argc, char **argv)
 
 		cv::imshow(it->filename().string(), img);
 
-		string actual = extractDigit(binary, blobs, angle);
+		string actual = extractDigit(blobs, angle);
 		string desire = parse_label(it->filename().string());
 		if (actual.empty()) {
 			++reject;
