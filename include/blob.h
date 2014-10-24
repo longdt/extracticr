@@ -21,6 +21,7 @@ public:
 	void add(const Blob& other);
 	void add(const cv::Point2i& point);
 	void setModify(bool flag);
+	void move(int x, int y);
 };
 
 class Blobs {
@@ -37,11 +38,13 @@ public:
 	template<class _EqPredicate> void partition(std::vector<int>& label, _EqPredicate predicate=_EqPredicate()) {
 		cv::partition(blobs, label, predicate);
 	}
+	cv::Rect boundingRect() const;
+	void move(int x, int y);
 	~Blobs();
 };
 /*binary image [0, 1]*/
 void findBlobs(const cv::Mat &binary, Blobs &blobs);
-cv::Rect boundingRect(const Blobs &blobs);
+
 cv::Mat drawBlob(const Blobs& blobs);
 //@deprecase. Use defragment instead of
 void groupVertical(Blobs& blobs, std::vector<int> &labels);

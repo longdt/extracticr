@@ -24,6 +24,17 @@ void Blob::setModify(bool flag) {
 	needNewRect = flag;
 }
 
+void Blob::move(int x, int y) {
+	for (auto& p : points) {
+		p.x += x;
+		p.y += y;
+	}
+	if (!needNewRect) {
+		bound.x += x;
+		bound.y += y;
+	}
+}
+
 Blobs::Blobs() {}
 
 size_t Blobs::size() const {
@@ -106,7 +117,7 @@ void findBlobs(const cv::Mat &binary, Blobs &blobs) {
 
 #define MAX_INT 0xfffffff
 
-cv::Rect boundingRect(const Blobs &blobs) {
+cv::Rect Blobs::boundingRect() const {
 	int minX = MAX_INT;
 	int minY = MAX_INT;
 	int maxX = 0;
@@ -130,8 +141,14 @@ cv::Rect boundingRect(const Blobs &blobs) {
 	return maxX == 0 ? cv::Rect() : cv::Rect(minX, minY, maxX - minX, maxY - minY);
 }
 
+void Blobs::move(int x, int y) {
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		blobs[i]->move(x, y);
+	}
+}
+
 cv::Mat drawBlob(const Blobs& blobs) {
-	cv::Rect rect = boundingRect(blobs);
+	cv::Rect rect = blobs.boundingRect();
 	cv::Mat output = cv::Mat::zeros(rect.y + rect.height, rect.x + rect.width, CV_8UC3);
 	// Randomy color the blobs
 	for (size_t i = 0; i < blobs.size(); i++) {
