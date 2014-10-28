@@ -305,11 +305,11 @@ bool isSingleDigit(digit_recognizer::result& predRs, cv::Rect& bound, average<in
 //		return predRs.confidence() > 0.01;
 //	}
 	//other implement
-	if (predRs.label() == 10) {
-		return false;
-	} else {
-		return true;
-	}
+//	if (predRs.label() == 10) {
+//		return false;
+//	} else {
+//		return true;
+//	}
 	double normalWidth = GET_NORMAL_DIGIT_WIDTH(bound.width, bound.height);
 	double score = 0;
 	for (int i = 0; i < 10; ++i) {
@@ -327,17 +327,23 @@ std::string concate(vector<string> strs) {
 	}
 	return ss.str();
 }
-
+bool isPeriod(cv::Rect carBox, int middleLine, Blob& blob);
 std::string extractDigit(Blobs& blobs, float slantAngle) {
 	sortBlobsByVertical(blobs);
 	vector<string> labels;
 	labels.resize(blobs.size());
-	vector<digit_recognizer::result> predRs;
+	vector<digit_recognizer::result> predRs(blobs.size(), digit_recognizer::result(0));
 	average<int> widthDigit;
-
+	cv::Rect blobsBox = blobs.boundingRect();
+	int middleLine = blobsBox.y + blobsBox.height / 2;
 	//try recognize sing digit first
 	for (int blobIdx = 0; blobIdx < blobs.size(); ++blobIdx) {
 		cv::Mat digit = makeDigitMat(*blobs[blobIdx], slantAngle);
+		Blob* blob = blobs[blobIdx];
+		if (isPeriod(blobsBox, middleLine, *blob)) {
+			labels[blobIdx] = ".";
+			continue;
+		}
 		digit_recognizer::result r = recognizer.predict(digit);
 		//debug show info
 		imshow(std::to_string(r.label()) + "pad" + std::to_string(r.confidence()) + "*" + std::to_string(r.softmaxScore()), digit);
@@ -350,7 +356,7 @@ std::string extractDigit(Blobs& blobs, float slantAngle) {
 				widthDigit.update(blobs[blobIdx]->boundingRect().width);
 			}
 		}
-		predRs.push_back(r);
+		predRs[blobIdx] = r;
 	}
 	//try recognize touching-digit 
 	for (int i = 0; i < labels.size(); ++i) {

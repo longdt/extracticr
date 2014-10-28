@@ -192,7 +192,8 @@ public:
 
 
 
-void groupVertical(Blobs& blobs, std::vector<int> &labels) {
+void groupVertical(Blobs& blobs) {
+	std::vector<int> labels;
 	blobs.partition(labels, DisjointDigit());
 	//join group
 	for (int label = 0; label < labels.size(); ++label) {

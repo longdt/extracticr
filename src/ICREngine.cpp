@@ -17,6 +17,36 @@
 #include "preprocessor.h"
 digit_recognizer recognizer;
 
+
+bool isPeriod(cv::Rect carBox, int middleLine, Blob& blob) {
+	cv::Rect brect = blob.boundingRect();
+	if (middleLine > brect.y + brect.height) {
+		return false;
+	}
+	float score = blob.points.size() / (float) (brect.width * brect.height);
+	score *= std::min(brect.width, brect.height) / (float) std::max(brect.width, brect.height);
+	return score > 0.8;
+}
+
+void removeDelimiter(cv::Rect carBox, int middleLine, Blobs& blobs, float slantAngle) {
+	for (int idx = blobs.size() - 1; idx >= 0; --idx) {
+		Blob& blob = *(blobs[idx]);
+		cv::Rect brect = blob.boundingRect();
+		if (middleLine > brect.y + brect.height) {
+			return;
+		}
+		float score = blob.points.size() / (float) (brect.width * brect.height);
+		score *= std::min(brect.width, brect.height) / (float) std::max(brect.width, brect.height);
+		if(score <= 0.8) {
+			cv::Mat digit = makeDigitMat(blob, slantAngle);
+			digit_recognizer::result rs = recognizer.predict(digit);
+			if (rs.label() == 1) {
+				blobs.erase(idx);
+			}
+		}
+	}
+}
+
 namespace icr {
 
 int detectTerminator(Blobs& blobs) {
@@ -40,16 +70,6 @@ int detectTerminator(Blobs& blobs) {
 	return -1;
 }
 
-bool isPeriod(cv::Rect carBox, int middleLine, Blob& blob) {
-	cv::Rect brect = blob.boundingRect();
-	if (middleLine < brect.y || middleLine > brect.y + brect.height) {
-		return false;
-	}
-	float score = blob.points.size() / (float) (brect.width * brect.height);
-	score *= std::min(brect.width, brect.height) / (float) std::max(brect.width, brect.height);
-	return score > 0.8;
-}
-
 int detectPeriod(Blobs& blobs) {
 	cv::Rect rect = blobs.boundingRect();
 	int middleLine = rect.y + rect.height / 2;
@@ -61,29 +81,11 @@ int detectPeriod(Blobs& blobs) {
 	return -1;
 }
 
-//std::string recognite(Blobs& blobs) {
-//	int termIdx = detectTerminator(blobs);
-//	if (termIdx != -1) {
-//		blobs.erase(termIdx);
-//	}
-//	cv::Rect rect = boundingRect(blobs);
-//	int middleLine = rect.y + rect.height / 2;
-//	std::string result;
-//	for (size_t i = 0; i < blobs.size(); ++i) {
-//		if (isPeriod(rect, middleLine, *blobs[i])) {
-//			result = result + ".";
-//			continue;
-//		}
-//		result =
-//	}
-//}
-
 ICREngine::ICREngine() {
 	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
 }
 
 ICREngine::~ICREngine() {
-	// TODO Auto-generated destructor stub
 }
 
 std::string ICREngine::recognite(cv::Mat& cheque) {
@@ -95,8 +97,9 @@ std::string ICREngine::recognite(cv::Mat& cheque) {
 	float angle = deslant(loc.size(), blobs);
 	auto car = drawBlob(blobs);
 	cv::imshow("hwimg", car);
-	std::vector<int> labels;
-	groupVertical(blobs, labels);
+	loc = blobs.boundingRect();
+	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
+	groupVertical(blobs);
 //	defragment(car, blobs);
 	return extractDigit(blobs, angle);
 }
