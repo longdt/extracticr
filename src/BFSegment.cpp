@@ -29,7 +29,6 @@ void BFSegment::genFPLayers() {
 	}
 	Mat fgSkeleton;
 	thinning(binImg, fgSkeleton);
-	imshow("skeleton", fgSkeleton);
 	Point start, end;
 	findSEPoint(fgSkeleton, start, end);
 	backgroundTFP(binImg, fpLayers[0]);
@@ -452,7 +451,6 @@ void backgroundTFP(Mat& src, vector<Point>& output) {
 		}
 	}
 	thinning(bgTop, bgTop);
-	imshow("bgtop", bgTop);
 	findEndPoint(bgTop, output);
 }
 
@@ -469,13 +467,8 @@ void backgroundBFP(Mat& src, vector<Point>& output) {
 			}
 		}
 	}
-//	bgBot.col(0).setTo(Scalar(0));
-//	bgBot.col(src.cols - 1).setTo(Scalar(0));
 	thinning(bgBot, bgBot);
-	imshow("bgbot", bgBot);
 	findEndPoint(bgBot, output);
-//	output.erase(output.begin());
-//	output.pop_back();
 }
 
 #include <opencv2/opencv.hpp>

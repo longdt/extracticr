@@ -69,8 +69,7 @@ int mmain(int argc, char **argv)
 //		cv::waitKey(0);
 		binary = binary * 255;
 		cv::imshow("binary", binary);
-		std::vector<int> labels;
-		groupVertical(blobs, labels);
+		groupVertical(blobs);
 		defragment(output, blobs);
 
 		cv::imshow(it->filename().string(), img);
