@@ -179,48 +179,50 @@ public:
 			return false;
 		}
 
-		int min = 0;
-		int max = 0;
-		if (b1.x < maxX2 || b2.x < maxX1) {
-			min = std::max(b1.x, b2.x);
-			max = std::min(maxX1, maxX2);
-		}
+		int min = std::max(b1.x, b2.x);
+		int max = std::min(maxX1, maxX2);
 		float overLap = (max - min);
 		return (overLap / b1.width + overLap / b2.width) > 0.7 ? true : (b1.y + b1.height <= b2.y || b2.y + b2.height <= b1.y);
 	}
 };
 
-
-
-void groupVertical(Blobs& blobs) {
-	std::vector<int> labels;
-	blobs.partition(labels, DisjointDigit());
-	//join group
-	for (int label = 0; label < labels.size(); ++label) {
-		//find first blob of label
-		Blob *blob = NULL;
-		int i = 0;
-		for (; i < labels.size(); ++i) {
-			if (labels[i] == label) {
-				blob = blobs[i];
-				break;
-			}
+class OverlapRejoin {
+public:
+	bool operator() (Blob* blob1, Blob* blob2) {
+		cv::Rect b1 = blob1->boundingRect();
+		cv::Rect b2 = blob2->boundingRect();
+		int maxX1 = b1.x + b1.width;
+		int maxX2 = b2.x + b2.width;
+		if (b1.x >= maxX2 || b2.x >= maxX1) {
+			return false;
 		}
-		if (blob == NULL) { //no blob (aka no label)
-			break;
-		}
-		++i;
-		while (i < labels.size()) {
-			if (labels[i] == label) {
-				blob->add(*blobs[i]);
-				blobs.erase(i);
-				labels.erase(labels.begin() + i);
-				continue;
-			}
-			++i;
+		int min = std::max(b1.x, b2.x);
+		int max = std::min(maxX1, maxX2);
+		float overLap = (max - min);
+		int minBlobWidth = std::min(b1.width, b2.width);
+		float dist = std::abs((b1.x + b1.width / 2) - (b2.x + b2.width / 2));
+		int span = std::max(maxX1, maxX2) - std::min(b1.x, b2.x);
+		float novlp = overLap / minBlobWidth - dist / span;
+		return novlp > 0.55;
+	}
+};
+
+int numLabel(std::vector<int>& labels, int label) {
+	int counter = 0;
+	for (size_t i = 0; i < labels.size(); ++i) {
+		if (i == label) {
+			++counter;
 		}
 	}
-	//filter low area
+	return counter;
+}
+
+inline bool isSmallBlob(Blob& blob) {
+	cv::Rect bound = blob.boundingRect();
+	return bound.width <= 3 || bound.height <= 3;
+}
+
+void removeSmallBlobs(Blobs& blobs) {
 	double perimaterSum = 0;
 	double baseLineSum = 0;
 	int i = 0;
@@ -236,13 +238,53 @@ void groupVertical(Blobs& blobs) {
 	while (i < blobs.size()) {
 		cv::Rect bound = blobs[i]->boundingRect();
 		rate = (bound.width + bound.height) / perimaterAverg;
-		if (rate < 0.2 || (rate < 0.5 && (bound.y + bound.height) < baseLineAverg * 0.9)) {
+		if (bound.width <= 3 || bound.height <= 3 || rate < 0.2 || (rate < 0.5 && (bound.y + bound.height) < baseLineAverg * 0.9)) {
+			blobs.erase(i);
+			continue;
+		}
+		++i;
+	}
+}
+
+void groupVertical(Blobs& blobs) {
+	std::vector<int> labels;
+	blobs.partition(labels, OverlapRejoin());
+	//join group
+	for (int label = 0; label < labels.size(); ++label) {
+		//find first blob of label
+		Blob *blob = NULL;
+		int i = 0;
+		for (; i < labels.size(); ++i) {
+			if (labels[i] == label) {
+				blob = blobs[i];
+				break;
+			}
+		}
+		if (blob == NULL) { //no blob (aka no label)
+			break;
+		}
+		//filter 2 blob small blobs which overlap
+		int numSameLabel = numLabel(labels, label);
+		if (numSameLabel == 2 && isSmallBlob(*blob)) {
 			blobs.erase(i);
 			labels.erase(labels.begin() + i);
 			continue;
 		}
 		++i;
+		while (i < labels.size()) {
+			if (labels[i] == label) {
+				if (numSameLabel != 2 || !isSmallBlob(*blobs[i])) {
+					blob->add(*blobs[i]);
+				}
+				blobs.erase(i);
+				labels.erase(labels.begin() + i);
+				continue;
+			}
+			++i;
+		}
 	}
+	//filter low area
+	removeSmallBlobs(blobs);
 }
 
 bool sortByVertical(Blob* blob1, Blob* blob2) {
