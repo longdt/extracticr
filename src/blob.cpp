@@ -210,7 +210,7 @@ public:
 int numLabel(std::vector<int>& labels, int label) {
 	int counter = 0;
 	for (size_t i = 0; i < labels.size(); ++i) {
-		if (i == label) {
+		if (labels[i] == label) {
 			++counter;
 		}
 	}
