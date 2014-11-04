@@ -1,7 +1,7 @@
 #include "preprocessor.h"
 #include <opencv2/imgproc/imgproc.hpp>
 
-Blob::Blob() : needNewRect(false) {
+Blob::Blob() : needNewRect(true) {
 }
 
 cv::Rect Blob::boundingRect() {
@@ -141,15 +141,59 @@ cv::Rect Blobs::boundingRect() const {
 	return maxX == 0 ? cv::Rect() : cv::Rect(minX, minY, maxX - minX, maxY - minY);
 }
 
+cv::Rect Blobs::boundingRect(int from, int end) const {
+	cv::Rect rect = blobs[from]->boundingRect();
+	for (int i = from + 1; i < end; ++i) {
+		cv::Rect other = blobs[i]->boundingRect();
+		int maxX = std::max(rect.x + rect.width, other.x + other.width);
+		int maxY = std::max(rect.y + rect.height, other.y + other.height);
+		rect.x = std::min(rect.x, other.x);
+		rect.y = std::min(rect.y, other.y);
+		rect.width = maxX - rect.x;
+		rect.height = maxY - rect.y;
+	}
+	return rect;
+}
+
 void Blobs::move(int x, int y) {
 	for (size_t i = 0; i < blobs.size(); ++i) {
 		blobs[i]->move(x, y);
 	}
 }
 
-cv::Mat drawBlob(const Blobs& blobs) {
+cv::Mat Blobs::cropBlobs(int from, int end) {
+	cv::Rect bound = boundingRect(from, end);
+	cv::Mat rs = cv::Mat::zeros(bound.height, bound.width, CV_8UC1);
+	for (int i = from; i < end; ++i) {
+		Blob& blob = *(blobs[i]);
+		for (size_t j = 0; j < blob.points.size(); j++) {
+			int x = blob.points[j].x - bound.x;
+			int y = blob.points[j].y - bound.y;
+			rs.at<uchar>(y, x) = 255;
+		}
+	}
+	return rs;
+}
+
+cv::Rect boundingRect(Blob& b1, Blob& b2) {
+	cv::Rect r1 = b1.boundingRect();
+	cv::Rect r2 = b2.boundingRect();
+	int minX = std::min(r1.x, r2.x);
+	int minY = std::min(r1.y, r2.y);
+	int maxX = std::max(r1.x + r1.width, r2.x + r2.width);
+	int maxY = std::max(r1.y + r1.height, r2.y + r2.height);
+	return maxX == 0 ? cv::Rect() : cv::Rect(minX, minY, maxX - minX, maxY - minY);
+}
+
+cv::Mat drawBlobs(const Blobs& blobs) {
+	cv::Mat output;
+	drawBlobs(blobs, output);
+	return output;
+}
+
+void drawBlobs(const Blobs& blobs, cv::Mat& output) {
 	cv::Rect rect = blobs.boundingRect();
-	cv::Mat output = cv::Mat::zeros(rect.y + rect.height, rect.x + rect.width, CV_8UC3);
+	output = cv::Mat::zeros(rect.y + rect.height, rect.x + rect.width, CV_8UC3);
 	// Randomy color the blobs
 	for (size_t i = 0; i < blobs.size(); i++) {
 		unsigned char r = 255 * (rand() / (1.0 + RAND_MAX));
@@ -165,7 +209,6 @@ cv::Mat drawBlob(const Blobs& blobs) {
 			output.at<cv::Vec3b>(y, x)[2] = r;
 		}
 	}
-	return output;
 }
 
 class DisjointDigit {

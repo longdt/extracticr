@@ -4,9 +4,12 @@
 #include <vector>
 using namespace tiny_cnn;
 using namespace std;
-void mat_to_vect(const cv::Mat& input, vec_t &dst);
+void matToVect(const cv::Mat& input, vec_t &dst);
 
 string parse_label(string filename);
+
+cv::Mat projectTop(const cv::Mat& src);
+cv::Mat projectBottom(const cv::Mat& src);
 
 template<class T> class average {
 private:

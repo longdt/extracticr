@@ -1,6 +1,6 @@
 #include "util/misc.h"
 
-void mat_to_vect(const cv::Mat& input, vec_t &dst) {
+void matToVect(const cv::Mat& input, vec_t &dst) {
 	int x_padding = 2;
 	int y_padding = 2;
 	const int width = input.cols + 2 * x_padding;
@@ -24,20 +24,35 @@ string parse_label(string filename) {
 	return label;
 }
 
-//
-//average::average() : sum(0), m_size(0){}
-//
-//void average::update(int value) {
-//	sum += value;
-//	++m_size;
-//}
-//
-//int average::mean() {
-//	return sum / m_size;
-//}
-//
-//int average::size() {
-//	return m_size;
-//}
+cv::Mat projectTop(const cv::Mat& src) {
+	cv::Mat dst(src.rows, src.cols, CV_8UC1, cv::Scalar(0));
+	for (int c = 0; c < src.cols; ++c) {
+		bool setPixel = false;
+		for (int r = 0; r < src.rows; ++r) {
+			if (setPixel) {
+				dst.at<uchar>(r, c) = 255;
+			} else if (src.at<uchar>(r, c) > 0) {
+				setPixel = true;
+				dst.at<uchar>(r, c) = 255;
+			}
+		}
+	}
+	return dst;
+}
+
+cv::Mat projectBottom(const cv::Mat& src) {
+	cv::Mat dst(src.rows, src.cols, CV_8UC1, cv::Scalar(0));
+	for (int c = 0; c < src.cols; ++c) {
+		bool setPixel = false;
+		for (int r = src.rows - 1; r >= 0 ; --r) {
+			if (setPixel) {
+				dst.at<uchar>(r, c) = 255;
+			} else if (src.at<uchar>(r, c) > 0) {
+				setPixel = true;
+				dst.at<uchar>(r, c) = 255;
+			}
+		}
+	}
+}
 
 

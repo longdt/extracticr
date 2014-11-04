@@ -7,7 +7,8 @@
 
 #ifndef BLOB_H_
 #define BLOB_H_
-#include "opencv2/core/operations.hpp"
+#include "opencv2/core/core.hpp"
+#include <vector>
 
 //blob
 class Blob {
@@ -39,13 +40,16 @@ public:
 		cv::partition(blobs, label, predicate);
 	}
 	cv::Rect boundingRect() const;
+	cv::Rect boundingRect(int from, int end) const;
 	void move(int x, int y);
+	cv::Mat cropBlobs(int from, int end);
 	~Blobs();
 };
 /*binary image [0, 1]*/
 void findBlobs(const cv::Mat &binary, Blobs &blobs);
-
-cv::Mat drawBlob(const Blobs& blobs);
+cv::Rect boundingRect(Blob& b1, Blob& b2);
+void drawBlobs(const Blobs& blobs, cv::Mat& output);
+cv::Mat drawBlobs(const Blobs& blobs);
 //@deprecase. Use defragment instead of
 void groupVertical(Blobs& blobs);
 bool sortByVertical(Blob* blob1, Blob* blob2);
@@ -54,5 +58,4 @@ void defragment(cv::Mat& strImg, Blobs &blobs);
 
 double distanceBlobs(Blob& blob1, Blob& blob2);
 double distanceBlobs(std::vector<cv::Point2i >& blob1, std::vector<cv::Point2i >& blob2);
-
 #endif /* BLOB_H_ */

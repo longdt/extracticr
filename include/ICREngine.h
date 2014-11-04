@@ -17,7 +17,6 @@ namespace icr {
 
 class ICREngine {
 private:
-	std::vector<DigitWidthStatistic> digitStatistics;
 public:
 	ICREngine();
 	std::string recognite(cv::Mat& cheque);

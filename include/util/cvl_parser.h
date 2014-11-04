@@ -18,7 +18,7 @@ Mat distort(Mat& src);
 cv::Mat resizeAspect(cv::Mat& src, int size);
 
 
-void mat_to_vect(const cv::Mat& input, vec_t &dst);
+void matToVect(const cv::Mat& input, vec_t &dst);
 
 void vect_to_mat(const vec_t &src, cv::Mat& output) {
 	output = Mat::zeros(28, 28, CV_8UC1);
@@ -291,7 +291,7 @@ void applyDistortion(vector<vec_t>& images, vector<label_t>& labels) {
 			distortion = distort(img);
 #endif
 			vec_t vec;
-			mat_to_vect(distortion, vec);
+			matToVect(distortion, vec);
 			images.push_back(vec);
 			labels.push_back(labels[idx]);
 			visited[idx] = true;
