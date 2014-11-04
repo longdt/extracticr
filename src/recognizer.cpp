@@ -178,7 +178,7 @@ digit_recognizer::result digit_recognizer::predict(const vec_t& in) {
 digit_recognizer::result digit_recognizer::predict(const cv::Mat& digit) {
 	assert(digit.cols == 28 && digit.rows == 28);
 	vec_t in;
-	mat_to_vect(digit, in);
+	matToVect(digit, in);
 	return predict(in);
 }
 

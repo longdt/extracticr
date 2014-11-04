@@ -23,7 +23,7 @@ extern vector<DigitWidthStatistic> digitStatistics;
 std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf);
 bool isSingleDigit(digit_recognizer::result& predRs, cv::Rect& bound, average<int>& estDigitWidth);
 
-cv::Mat makeDigitMat(cv::Mat& crop) {
+cv::Mat makeDigitMat(const cv::Mat& crop) {
 	int width = 0;
 	int height = 0;
 	int paddingX = 0;
@@ -50,19 +50,8 @@ cv::Mat makeDigitMat(cv::Mat& crop) {
 	return padded;
 }
 
-cv::Mat blobToMat(Blob& blob) {
-	cv::Rect bound = blob.boundingRect();
-	cv::Mat rs = cv::Mat::zeros(bound.y + bound.height, bound.width, CV_8UC1);
-	for (size_t j = 0; j < blob.points.size(); j++) {
-		int x = blob.points[j].x - bound.x;
-		int y = blob.points[j].y;
-		rs.at<uchar>(y, x) = 255;
-	}
-	return rs;
-}
-
 cv::Mat makeDigitMat(Blob& blob, float slantAngle) {
-	cv::Mat crop = blobToMat(blob);
+	cv::Mat crop = cropBlob(blob);
 	float angle = deslant(crop, NULL, projectWidth);
 	if (slantAngle * angle > 0) {
 		angle = abs(angle + slantAngle) > 48 ? 0 : angle;
@@ -94,10 +83,10 @@ void makeCut(const Mat& src, vector<Point> &cut, Mat& part1, Mat& part2) {
 	}
 }
 
-digit_recognizer::result recognize1D(Mat& src) {
+digit_recognizer::result recognize1D(const Mat& src) {
 	auto digitMat = makeDigitMat(src);
 	vec_t in;
-	mat_to_vect(digitMat, in);
+	matToVect(digitMat, in);
 	return recognizer.predict(in);
 }
 
@@ -327,6 +316,7 @@ std::string concate(vector<string> strs) {
 	}
 	return ss.str();
 }
+
 bool isPeriod(cv::Rect carBox, int middleLine, Blob& blob);
 std::string extractDigit(Blobs& blobs, float slantAngle) {
 	sortBlobsByVertical(blobs);

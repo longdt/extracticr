@@ -7,14 +7,12 @@
 
 #include <ICREngine.h>
 #include <opencv2/highgui/highgui.hpp>
-
 #include "recognizer.h"
-
 #include "blob.h"
-
 #include "CARLocator.h"
-
 #include "preprocessor.h"
+
+#include "NumberRecognizer.h"
 digit_recognizer recognizer;
 
 
@@ -82,7 +80,6 @@ int detectPeriod(Blobs& blobs) {
 }
 
 ICREngine::ICREngine() {
-	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
 }
 
 ICREngine::~ICREngine() {
@@ -95,13 +92,16 @@ std::string ICREngine::recognite(cv::Mat& cheque) {
 	cv::Rect loc = blobs.boundingRect();
 	blobs.move(-loc.x, -loc.y);
 	float angle = deslant(loc.size(), blobs);
-	auto car = drawBlob(blobs);
+	cv::Mat car;
+	drawBlobs(blobs, car);
 	cv::imshow("hwimg", car);
 	loc = blobs.boundingRect();
-	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
+//	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
 	groupVertical(blobs);
 //	defragment(car, blobs);
-	return extractDigit(blobs, angle);
+	NumberRecognizer nr(blobs);
+	//return extractDigit(blobs, angle);
+	return nr.predict();
 }
 
 

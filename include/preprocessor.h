@@ -50,8 +50,9 @@ std::vector<int> genVerticalCuts(std::vector<int>& projectV);
 void thinning(const cv::Mat& src, cv::Mat& dst);
 
 //recognize-touch
-cv::Mat makeDigitMat(cv::Mat& crop);
+cv::Mat makeDigitMat(const cv::Mat& crop);
 cv::Mat makeDigitMat(Blob& blob, float slantAngle = 0);
+digit_recognizer::result recognize1D(const cv::Mat& src);
 std::string extractDigit(Blobs& blobs, float slantAngle);
 std::string recognizeDigits(Blob& blob, int estDigitWidth, digit_recognizer::result& r);
 

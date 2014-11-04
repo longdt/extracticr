@@ -64,7 +64,8 @@ int mmain(int argc, char **argv)
 		binary = cropDigitString(binary);
 		findBlobs(binary, blobs);
 		float angle = deslant(binary.size(), blobs); //deslant(binary, &binary); //
-		cv::Mat output = drawBlob(blobs);
+		cv::Mat output;
+		drawBlobs(blobs, output);
 		cv::imshow("labelled", output);
 //		cv::waitKey(0);
 		binary = binary * 255;
