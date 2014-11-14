@@ -23,9 +23,9 @@ NumberRecognizer::NumberRecognizer(Blobs &blobs) {
 	cv::Mat car = drawBlobs(blobs);
 	line(car, Point(0, middleLine), Point(car.cols -1, middleLine), Scalar(255, 0, 0));
 	cv::imshow("hwimg", car);
-//	Mat img;
-//	drawBlobs(segms, img);
-//	imshow("segms", img);
+	Mat img = drawBlobs(segms);
+	namedWindow("segms", WINDOW_NORMAL);
+	imshow("segms", img);
 //	waitKey();
 }
 
@@ -77,6 +77,25 @@ void rollPath(const Mat& img, vector<Point>& approx) {
 	approx = result;
 }
 
+#define MAX_SHIFT 3
+Point shift2BG(const Mat& project, Point p) {
+	p.y = p.y - 1;
+	if (project.at<uchar>(p) == 0) {
+		return p;
+	}
+	for (int i = 1; i <= MAX_SHIFT; ++i) {
+		Point newP(p.x + i, p.y - i);
+		if (project.at<uchar>(newP) == 0) {
+			return newP;
+		}
+		newP.x = p.x - i;
+		if (project.at<uchar>(newP) == 0) {
+			return newP;
+		}
+	}
+	return p;
+}
+
 void genUpperCuts(Mat& img, std::vector<int>& upperCuts) {
 	Mat project = projectTop(img);
     //Extract the contours so that
@@ -100,7 +119,9 @@ void genUpperCuts(Mat& img, std::vector<int>& upperCuts) {
 	//analytic feature points
 	vector<Point> cps;
 	findConcavePoints(approx, cps);
+	//correct point (shift to background point)
 	for (Point p : cps) {
+		p = shift2BG(project, p);
 		upperCuts.push_back(p.x);
 	}
 }
@@ -176,33 +197,34 @@ void NumberRecognizer::genOverSegm(Blobs &blobs) {
 }
 
 class Path {
-	 std::vector<int> path;
-	 std::vector<label_t> labels;
-	 float score;
+	friend class NumberRecognizer;
+	std::vector<int> path;
+	std::vector<label_t> labels;
+	float score;
 public:
-	 Path() : score(0) {
+	Path() : score(0) {
 
-	 }
+	}
 
-	 float getScore() {
-		 return score / (path.size() - 1);
-	 }
+	float getScore() {
+		return score / (path.size() - 1);
+	}
 
-	 void init(int node) {
-		 path.push_back(node);
-	 }
+	void init(int node) {
+		path.push_back(node);
+	}
 
-	 void add(int node, label_t l, float score) {
-		 path.push_back(node);
-		 this->score += score;
-		 labels.push_back(l);
-	 }
+	void add(int node, label_t l, float score) {
+		path.push_back(node);
+		this->score += score;
+		labels.push_back(l);
+	}
 
-	 const std::vector<int>& get() const {
-		 return path;
-	 }
+	const std::vector<int>& get() const {
+		return path;
+	}
 
-	 std::string string() {
+	std::string string() {
 		stringstream ss;
 		for (label_t l : labels) {
 			if (l < 10) {
@@ -214,7 +236,7 @@ public:
 			}
 		}
 		return ss.str();
-	 }
+	}
 };
 
 class Beam {
@@ -237,6 +259,8 @@ public:
 		for (it = paths.erase(it); it != paths.end(); it = paths.erase(it)) {
 			if (it->get().back() == lowestNode) {
 				rs.push_back(*it);
+			} else {
+				break;
 			}
 		}
 		return rs;
@@ -295,13 +319,13 @@ bool NumberRecognizer::isCandidatePattern(int from, int end) {
 	if (valid) {
 		return true;
 	}
-	return true;
+//	return true;
 	Blob* blob = segms.newBlob(from, end);
 	valid = isPeriod(rect, middleLine, *blob);
 	delete blob;
 	return valid;
 }
-
+NumberModel NumberRecognizer::nm;
 void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, int node) {
 	if (paths.empty()) {
 		return;
@@ -311,9 +335,11 @@ void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, in
 		Mat pattern = segms.cropBlobs(endNode, node);
 		auto result = recognize1D(pattern);
 		GeoContext gc(strHeight, segms, endNode, node);
+
 		for (Path p : paths) {
 			Path newP = p;
-			newP.add(node, result.label(), result.confidence());
+			float score = result.confidence() + nm.getScore(newP.labels, result.label());
+			newP.add(node, result.label(), score);
 			beam.add(newP);
 		}
 	} catch (cv::Exception& e) {

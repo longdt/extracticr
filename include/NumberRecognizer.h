@@ -7,6 +7,7 @@
 
 #ifndef INCLUDE_NUMBERRECOGNIZER_H_
 #define INCLUDE_NUMBERRECOGNIZER_H_
+#include <GeoContextModel.h>
 #include "blob.h"
 #include <vector>
 
@@ -15,6 +16,8 @@ class Path;
 class Beam;
 class NumberRecognizer {
 private:
+	static NumberModel nm;
+	static GeoContextModel gcm;
 	float strHeight;
 	float middleLine;
 	Blobs segms;
