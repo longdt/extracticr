@@ -167,4 +167,16 @@ void GeoContext::getBIGVector(vec_t& output) {
 	output.push_back((curUcg.box.x - prevUcg.box.x - prevUcg.box.width) / strHeight);
 }
 
+float NumberModel::getScore(std::vector<label_t> labels, label_t l) {
+	//manual score implementation
+	if (l == 10 && std::find(labels.begin(), labels.end(), l) != labels.end()) {
+		return -1.0;
+	}
+	auto begin = labels.size() >= 3 ? labels.end() - 3 : labels.end() - labels.size();
+	if (l == 11 && std::find(begin, labels.end(), l) != labels.end()) {
+		return -1.0;
+	}
+	return 0;
+}
+
 } /* namespace icr */

@@ -19,15 +19,15 @@ int main()
 		return 0;
 	}
 	icr::ICREngine engine;
-	int skip = 2;
+	int skip = 0;
 	int counter = 0;
 	for (directory_iterator iter(p), iterend; iter != iterend; ++iter) {
 		++counter;
 		if (counter <= skip) {
 			continue;
 		}
-		cv::Mat cheque = cv::imread(iter->path().string(), 0);
-//		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/chq_00234_00.jpeg", 0);
+//		cv::Mat cheque = cv::imread(iter->path().string(), 0);
+		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/chq_00458_00.jpeg", 0);
 		if (cheque.empty())
 			return -1;
 		chqName = iter->path().filename().string();

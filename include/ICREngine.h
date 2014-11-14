@@ -17,8 +17,6 @@
 namespace icr {
 
 class ICREngine {
-private:
-	static GeoContextModel gcm;
 public:
 	ICREngine();
 	std::string recognite(cv::Mat& cheque);

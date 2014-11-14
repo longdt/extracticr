@@ -10,6 +10,9 @@
 #include "cnn/tiny_cnn.h"
 
 #include "blob.h"
+#include <vector>
+
+#include "cnn/util.h"
 using namespace tiny_cnn;
 
 namespace icr {
@@ -53,6 +56,11 @@ public:
 	void getUIGVector(vec_t& output);
 	void getBCGVector(vec_t& output);
 	void getBIGVector(vec_t& output);
+};
+
+class NumberModel {
+public:
+	float getScore(std::vector<label_t> labels, label_t l);
 };
 
 } /* namespace icr */
