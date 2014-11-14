@@ -331,6 +331,16 @@ void projectVertical(cv::Mat &input, std::vector<int> &output) {
 	}
 }
 
+void projectVertical(Blob& blob, std::vector<int>& output) {
+	cv::Rect box = blob.boundingRect();
+	output.resize(box.width);
+	std::fill(output.begin(), output.end(), 0);
+	for (auto p : blob.points) {
+		output[p.x - box.x] += 1;
+	}
+}
+
+
 void projectVertical(Blobs &blobs, std::vector<int> &output) {
 	std::fill(output.begin(), output.end(), 0);
 	for (size_t i = 0; i < blobs.size(); ++i) {
@@ -341,9 +351,12 @@ void projectVertical(Blobs &blobs, std::vector<int> &output) {
 	}
 }
 
-void updateVerticalProjection(std::vector<cv::Point2i>& blobPoints, std::vector<int>& output) {
-	for (auto p : blobPoints) {
-		output[p.x] += 1;
+void projectHorizontal(Blob& blob, std::vector<int>& output) {
+	cv::Rect box = blob.boundingRect();
+	output.resize(box.height);
+	std::fill(output.begin(), output.end(), 0);
+	for (auto p : blob.points) {
+		output[p.y - box.y] += 1;
 	}
 }
 
@@ -382,7 +395,7 @@ std::vector<int> genVerticalCuts(std::vector<int>& projectV) {
 }
 
 
-float projectWidth(cv::Mat& input) {
+float objectWidth(cv::Mat& input) {
 	float width = 0;
 	for (int i = 0; i < input.cols; ++i) {
 		for (int j = 0; j < input.rows; ++j) {
@@ -404,7 +417,7 @@ float blobsWidth(cv::Mat& input) {
 		Blob* b = blobs[i];
 		cost += b->boundingRect().width;
 	}
-	cost = projectWidth(input) * 0.8 + cost * 0.2;
+	cost = objectWidth(input) * 0.8 + cost * 0.2;
 	return cost;
 }
 

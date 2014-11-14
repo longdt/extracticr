@@ -5,6 +5,7 @@
  *      Author: thienlong
  */
 
+#include <GeoContextModel.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "NumberRecognizer.h"
@@ -16,32 +17,19 @@
 namespace icr {
 using namespace cv;
 NumberRecognizer::NumberRecognizer(Blobs &blobs) {
-	estHeightVertCenter(blobs);
+	estHeightVertCenter(blobs, strHeight, middleLine);
 	genOverSegm(blobs);
 	//debug
-	Mat img;
-	drawBlobs(segms, img);
-	imshow("segms", img);
-	waitKey();
+	cv::Mat car = drawBlobs(blobs);
+	line(car, Point(0, middleLine), Point(car.cols -1, middleLine), Scalar(255, 0, 0));
+	cv::imshow("hwimg", car);
+//	Mat img;
+//	drawBlobs(segms, img);
+//	imshow("segms", img);
+//	waitKey();
 }
 
-void NumberRecognizer::estHeightVertCenter(Blobs& blobs) {
-	int heightScore = 0;
-	int sumHeightW = 0;
-	int middleLineScore = 0;
-	int sumMLW = 0;
-	for (int i = 0, n = blobs.size() - 1; i < n; ++i) {
-		Rect r1 = blobs[i]->boundingRect();
-		Rect r2 = blobs[i + 1]->boundingRect();
-		Rect compose = boundingRect(*blobs[i], *blobs[i + 1]);
-		heightScore += compose.height * (r1.width + r2.width);
-		sumHeightW += r1.width + r2.width;
-		middleLineScore += (compose.y + compose.height / 2) * (r1.area() + r2.area());
-		sumMLW += r1.area() + r2.area();
-	}
-	strHeight = heightScore / sumHeightW;
-	middleLine = middleLineScore / sumMLW;
-}
+
 
 bool NumberRecognizer::isTouching(Blob& blob) {
 	Rect r = blob.boundingRect();
@@ -75,8 +63,8 @@ void rollPath(const Mat& img, vector<Point>& approx) {
 		}
 	}
 	if (btmLeft == 0) {
-		assert(btmRight == approx.size() - 1);
-		return;
+		if (btmRight == approx.size() - 1)
+			return;
 	}
 	vector<Point> result;
 	if (btmLeft < btmRight) {
@@ -94,18 +82,21 @@ void genUpperCuts(Mat& img, std::vector<int>& upperCuts) {
     //Extract the contours so that
     vector<vector<Point> > contours;
     findContours( project, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    if (contours.empty()) {
+    	return;
+    }
 	vector<Point> approx;
 	cv::approxPolyDP(cv::Mat(contours[0]), approx, cv::arcLength(cv::Mat(contours[0]), true)*0.02, true);
 	rollPath(project, approx);
 	//debug
-	Mat drawing(project.rows, project.cols, CV_8UC3);
-	for (size_t i = 0; i < approx.size() - 1; ++i) {
-		if (i == 0) {
-			line(drawing, approx[i], approx[i + 1], Scalar( 255,0, 0), 1);
-		} else {
-			line(drawing, approx[i], approx[i + 1], Scalar(0, 255, 0), 1);
-		}
-	}
+//	Mat drawing(project.rows, project.cols, CV_8UC3);
+//	for (size_t i = 0; i < approx.size() - 1; ++i) {
+//		if (i == 0) {
+//			line(drawing, approx[i], approx[i + 1], Scalar( 255,0, 0), 1);
+//		} else {
+//			line(drawing, approx[i], approx[i + 1], Scalar(0, 255, 0), 1);
+//		}
+//	}
 	//analytic feature points
 	vector<Point> cps;
 	findConcavePoints(approx, cps);
@@ -187,24 +178,24 @@ void NumberRecognizer::genOverSegm(Blobs &blobs) {
 class Path {
 	 std::vector<int> path;
 	 std::vector<label_t> labels;
-	 float cost;
+	 float score;
 public:
-	 Path() : cost(0) {
+	 Path() : score(0) {
 
 	 }
 
-	 float getCost() {
-		 return cost / (path.size() - 1);
+	 float getScore() {
+		 return score / (path.size() - 1);
 	 }
 
 	 void init(int node) {
 		 path.push_back(node);
 	 }
 
-	 void add(int node, digit_recognizer::result rs) {
+	 void add(int node, label_t l, float score) {
 		 path.push_back(node);
-		 cost = cost - rs.confidence();
-		 labels.push_back(rs.label());
+		 this->score += score;
+		 labels.push_back(l);
 	 }
 
 	 const std::vector<int>& get() const {
@@ -216,8 +207,10 @@ public:
 		for (label_t l : labels) {
 			if (l < 10) {
 				ss << std::to_string(l);
-			} else {
-				ss << "'" <<std::to_string(l) << "'";
+			} else if (l == 10){
+				ss << ".";
+			} else if (l == 11) {
+				ss <<",";
 			}
 		}
 		return ss.str();
@@ -269,11 +262,11 @@ public:
 		if (counter == with) {
 			--it;
 			auto worstIt = it;
-			float worstCost = -999999;
+			float worstScore = 999999;
 			for (; counter >= 0; --it, --counter) {
-				float cost = it->getCost();
-				if (worstCost < cost) {
-					worstCost = cost;
+				float score = it->getScore();
+				if (worstScore > score) {
+					worstScore = score;
 					worstIt = it;
 				}
 			}
@@ -284,11 +277,11 @@ public:
 
 Path bestPath(std::vector<Path>& paths) {
 	auto bestIt = paths.begin();
-	float bestCost = 999999;
+	float bestCost = -999999;
 	for (auto it = paths.begin(), end = paths.end(); it != end; ++it) {
-		float cost = it->getCost();
-		if (bestCost > cost) {
-			bestCost = cost;
+		float score = it->getScore();
+		if (bestCost < score) {
+			bestCost = score;
 			bestIt = it;
 		}
 	}
@@ -298,7 +291,15 @@ Path bestPath(std::vector<Path>& paths) {
 bool NumberRecognizer::isCandidatePattern(int from, int end) {
 	Rect rect = segms.boundingRect(from, end);
 	//verify condition
-	return (rect.height >= strHeight / 3.0f) && (rect.width < 2.4 * strHeight) && (rect.width / (float) rect.height < 3);
+	bool valid = (rect.height >= strHeight / 3.0f) && (rect.width < 2.4 * strHeight) && (rect.width / (float) rect.height < 3);
+	if (valid) {
+		return true;
+	}
+	return true;
+	Blob* blob = segms.newBlob(from, end);
+	valid = isPeriod(rect, middleLine, *blob);
+	delete blob;
+	return valid;
 }
 
 void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, int node) {
@@ -306,12 +307,16 @@ void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, in
 		return;
 	}
 	int endNode = paths[0].get().back();
-	Mat pattern = segms.cropBlobs(endNode, node);
-	auto result = recognize1D(pattern);
-	for (Path p : paths) {
-		Path newP = p;
-		newP.add(node, result);
-		beam.add(newP);
+	try {
+		Mat pattern = segms.cropBlobs(endNode, node);
+		auto result = recognize1D(pattern);
+		GeoContext gc(strHeight, segms, endNode, node);
+		for (Path p : paths) {
+			Path newP = p;
+			newP.add(node, result.label(), result.confidence());
+			beam.add(newP);
+		}
+	} catch (cv::Exception& e) {
 	}
 }
 

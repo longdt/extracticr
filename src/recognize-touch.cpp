@@ -1,4 +1,5 @@
 
+#include <boost/filesystem.hpp>
 #include <BFSegment.h>
 #include <algorithm>
 #include <opencv2/highgui/highgui.hpp>
@@ -10,6 +11,8 @@
 #include "preprocessor.h"
 
 #include "digit-statistic.h"
+
+using boost::filesystem::path;
 
 #define CONFIDENCE_THRESHOLD  0.03
 #define PROBABLY_SINGLE_DIGIT 0.09
@@ -52,7 +55,7 @@ cv::Mat makeDigitMat(const cv::Mat& crop) {
 
 cv::Mat makeDigitMat(Blob& blob, float slantAngle) {
 	cv::Mat crop = cropBlob(blob);
-	float angle = deslant(crop, NULL, projectWidth);
+	float angle = deslant(crop, NULL, objectWidth);
 	if (slantAngle * angle > 0) {
 		angle = abs(angle + slantAngle) > 48 ? 0 : angle;
 	}
@@ -82,9 +85,16 @@ void makeCut(const Mat& src, vector<Point> &cut, Mat& part1, Mat& part2) {
 		}
 	}
 }
-
+extern std::string chqName;
 digit_recognizer::result recognize1D(const Mat& src) {
 	auto digitMat = makeDigitMat(src);
+	//TODO DEBUG generate sample data
+//	digitMat = 255 - digitMat;
+//	path filePath = "temp/" + chqName;
+//	if (!boost::filesystem::exists(filePath)) {
+//		boost::filesystem::create_directory(filePath);
+//	}
+//	imwrite(filePath.string() + + "/-" + std::to_string(clock()) + ".png", digitMat);
 	vec_t in;
 	matToVect(digitMat, in);
 	return recognizer.predict(in);

@@ -35,6 +35,22 @@ void Blob::move(int x, int y) {
 	}
 }
 
+cv::Point2f Blob::getMassCenter() {
+	int size = points.size();
+	cv::Point2f centroid;
+	if (size > 0) {
+		float sumX = 0;
+		float sumY = 0;
+	    for (auto point : points){
+	        sumX += point.x;
+	        sumY += point.y;
+	    }
+		centroid.x = sumX/size;
+		centroid.y = sumY/size;
+	}
+	return centroid;
+}
+
 Blobs::Blobs() {}
 
 size_t Blobs::size() const {
@@ -161,6 +177,14 @@ void Blobs::move(int x, int y) {
 	}
 }
 
+Blob* Blobs::newBlob(int from, int end) const {
+	Blob* b = new Blob();
+	for (int i = from; i < end; ++i) {
+		b->add(*(blobs[i]));
+	}
+	return b;
+}
+
 cv::Mat Blobs::cropBlobs(int from, int end) {
 	cv::Rect bound = boundingRect(from, end);
 	cv::Mat rs = cv::Mat::zeros(bound.height, bound.width, CV_8UC1);
@@ -175,6 +199,24 @@ cv::Mat Blobs::cropBlobs(int from, int end) {
 	return rs;
 }
 
+cv::Point2f Blobs::getMassCenter() const {
+	cv::Point2f centroid;
+	float sumX = 0;
+	float sumY = 0;
+	int size = 0;
+	for (int i = 0; i < blobs.size(); ++i) {
+		Blob* blob = blobs[i];
+		size += blob->points.size();
+	    for (auto point : blob->points){
+	        sumX += point.x;
+	        sumY += point.y;
+	    }
+	}
+	centroid.x = sumX/size;
+	centroid.y = sumY/size;
+	return centroid;
+}
+
 cv::Rect boundingRect(Blob& b1, Blob& b2) {
 	cv::Rect r1 = b1.boundingRect();
 	cv::Rect r2 = b2.boundingRect();
@@ -183,6 +225,32 @@ cv::Rect boundingRect(Blob& b1, Blob& b2) {
 	int maxX = std::max(r1.x + r1.width, r2.x + r2.width);
 	int maxY = std::max(r1.y + r1.height, r2.y + r2.height);
 	return maxX == 0 ? cv::Rect() : cv::Rect(minX, minY, maxX - minX, maxY - minY);
+}
+
+cv::Rect boundingRect(cv::Rect r1, cv::Rect r2) {
+	int minX = std::min(r1.x, r2.x);
+	int minY = std::min(r1.y, r2.y);
+	int maxX = std::max(r1.x + r1.width, r2.x + r2.width);
+	int maxY = std::max(r1.y + r1.height, r2.y + r2.height);
+	return maxX == 0 ? cv::Rect() : cv::Rect(minX, minY, maxX - minX, maxY - minY);
+}
+
+void estHeightVertCenter(Blobs& blobs, float& strHeight, float& middleLine) {
+	float heightScore = 0;
+	int sumHeightW = 0;
+	float middleLineScore = 0;
+	int sumMLW = 0;
+	for (int i = 0, n = blobs.size() - 1; i < n; ++i) {
+		cv::Rect r1 = blobs[i]->boundingRect();
+		cv::Rect r2 = blobs[i + 1]->boundingRect();
+		cv::Rect compose = boundingRect(*blobs[i], *blobs[i + 1]);
+		heightScore += compose.height * (r1.width + r2.width);
+		sumHeightW += r1.width + r2.width;
+		middleLineScore += (compose.y + compose.height / 2) * (r1.area() + r2.area());
+		sumMLW += r1.area() + r2.area();
+	}
+	strHeight = heightScore / sumHeightW;
+	middleLine = middleLineScore / sumMLW;
 }
 
 cv::Mat drawBlobs(const Blobs& blobs) {
@@ -209,6 +277,17 @@ void drawBlobs(const Blobs& blobs, cv::Mat& output) {
 			output.at<cv::Vec3b>(y, x)[2] = r;
 		}
 	}
+}
+
+cv::Mat drawBinaryBlobs(const Blobs& blobs) {
+	cv::Rect rect = blobs.boundingRect();
+	cv::Mat output = cv::Mat::zeros(rect.y + rect.height, rect.x + rect.width, CV_8UC1);
+	for (size_t i = 0; i < blobs.size(); i++) {
+		for (auto p : blobs[i]->points) {
+			output.at<uchar>(p) = 255;
+		}
+	}
+	return output;
 }
 
 class DisjointDigit {
@@ -327,7 +406,7 @@ void groupVertical(Blobs& blobs) {
 		}
 	}
 	//filter low area
-	removeSmallBlobs(blobs);
+//	removeSmallBlobs(blobs);
 }
 
 bool sortByVertical(Blob* blob1, Blob* blob2) {
