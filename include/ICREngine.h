@@ -7,6 +7,7 @@
 
 #ifndef INCLUDE_ICRENGINE_H_
 #define INCLUDE_ICRENGINE_H_
+#include <GeoContextModel.h>
 #include <string>
 
 #include "opencv2/core/core.hpp"
@@ -17,6 +18,7 @@ namespace icr {
 
 class ICREngine {
 private:
+	static GeoContextModel gcm;
 public:
 	ICREngine();
 	std::string recognite(cv::Mat& cheque);

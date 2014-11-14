@@ -22,22 +22,22 @@ public:
 		sum += value;
 	}
 
-	T mean() {
-		return sum / values.size();
+	double mean() {
+		return sum /(double) values.size();
 	}
 
-	T deviation() {
-		T m = mean();
-		T devSum(0);
+	double deviation() {
+		double m = mean();
+		double devSum(0);
 		for (T v : values) {
 			devSum += abs(m - v);
 		}
 		return devSum / values.size();
 	}
 
-	T sdeviation() {
-		T m = mean();
-		T devSum(0);
+	double sdeviation() {
+		double m = mean();
+		double devSum(0);
 		for (T v : values) {
 			devSum += (m - v) * (m - v);
 		}

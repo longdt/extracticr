@@ -58,7 +58,7 @@ static const bool connection[] = {
 
 digit_recognizer::digit_recognizer(bool load_weight) : C1(32, 32, 5, 1, 6), S2(28, 28, 6, 2),
 		C3(14, 14, 5, 6, 16, connection_table(connection, 6, 16)), 
-		S4(10, 10, 16, 2), C5(5, 5, 5, 16, 120), F6(120, 11) {
+		S4(10, 10, 16, 2), C5(5, 5, 5, 16, 120), F6(120, 12) {
 	assert(C1.param_size() == 156 && C1.connection_size() == 122304);
 	assert(S2.param_size() == 12 && S2.connection_size() == 5880);
 	assert(C3.param_size() == 1516 && C3.connection_size() == 151600);

@@ -15,10 +15,9 @@ class Path;
 class Beam;
 class NumberRecognizer {
 private:
-	int strHeight;
-	int middleLine;
+	float strHeight;
+	float middleLine;
 	Blobs segms;
-	void estHeightVertCenter(Blobs& blobs);
 	void genOverSegm(Blobs& blobs);
 	void genVertCuts(Blob& blob, std::vector<int>& cuts);
 	bool isTouching(Blob& blobs);
@@ -30,7 +29,7 @@ public:
 	std::string predict();
 	virtual ~NumberRecognizer();
 };
-
 } /* namespace icr */
+bool isPeriod(cv::Rect carBox, int middleLine, Blob& blob);
 
 #endif /* SRC_NUMBERRECOGNIZER_H_ */

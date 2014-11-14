@@ -7,6 +7,7 @@
 
 #include <ICREngine.h>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include "recognizer.h"
 #include "blob.h"
 #include "CARLocator.h"
@@ -92,9 +93,6 @@ std::string ICREngine::recognite(cv::Mat& cheque) {
 	cv::Rect loc = blobs.boundingRect();
 	blobs.move(-loc.x, -loc.y);
 	float angle = deslant(loc.size(), blobs);
-	cv::Mat car;
-	drawBlobs(blobs, car);
-	cv::imshow("hwimg", car);
 	loc = blobs.boundingRect();
 //	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
 	groupVertical(blobs);
