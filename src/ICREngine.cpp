@@ -90,6 +90,9 @@ std::string ICREngine::recognite(cv::Mat& cheque) {
 	CARLocator locator(cheque);
 	Blobs blobs;
 	locator.getHandwrittenBlobs(blobs);
+	if (blobs.size() == 0) {
+		return "";
+	}
 	cv::Rect loc = blobs.boundingRect();
 	blobs.move(-loc.x, -loc.y);
 	float angle = deslant(loc.size(), blobs);
