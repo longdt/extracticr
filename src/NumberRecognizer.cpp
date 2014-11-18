@@ -11,15 +11,21 @@
 #include "NumberRecognizer.h"
 #include "opencv2/core/core.hpp"
 #include "preprocessor.h"
-
 #include "util/misc.h"
 #include <list>
+
+
+#include <boost/filesystem.hpp>
+using boost::filesystem::path;
+extern std::string chqName;
+extern digit_recognizer recognizer;
+
 namespace icr {
 using namespace cv;
 NumberRecognizer::NumberRecognizer(Blobs &blobs) {
 	estHeightVertCenter(blobs, strHeight, middleLine);
 	genOverSegm(blobs);
-	//debug
+	//TODO debug
 	cv::Mat car = drawBlobs(blobs);
 	line(car, Point(0, middleLine), Point(car.cols -1, middleLine), Scalar(255, 0, 0));
 	cv::imshow("hwimg", car);
@@ -77,7 +83,7 @@ void rollPath(const Mat& img, vector<Point>& approx) {
 	approx = result;
 }
 
-#define MAX_SHIFT 3
+#define MAX_SHIFT 2
 Point shift2BG(const Mat& project, Point p) {
 	p.y = p.y - 1;
 	if (project.at<uchar>(p) == 0) {
@@ -132,6 +138,26 @@ void genLowerCuts(Mat& img, std::vector<int>& lowerCuts) {
 	genUpperCuts(flipedImg, lowerCuts);
 }
 
+int mergeVertCut(const Mat& img, int x1, int x2) {
+	int cntCut1 = 0;
+	int cntCut2 = 0;
+	for (int r = 0; r < img.rows; ++r) {
+		if (img.at<uchar>(r, x1) > 0) {
+			++cntCut1;
+		}
+		if (img.at<uchar>(r, x2) > 0) {
+			++cntCut2;
+		}
+	}
+	if (cntCut1 > cntCut2) {
+		return x2;
+	} else if (cntCut1 < cntCut2) {
+		return x1;
+	} else {
+		return (x1 + x2) / 2;
+	}
+}
+
 void NumberRecognizer::genVertCuts(Blob& blob, std::vector<int>& cuts) {
 	Rect box = blob.boundingRect();
 	Mat img = cropBlob(blob);
@@ -149,7 +175,7 @@ void NumberRecognizer::genVertCuts(Blob& blob, std::vector<int>& cuts) {
 				break;
 			}
 		}
-		x = (nearest == 0) ? x + box.x : (x + nearest) / 2 + box.x;
+		x = (nearest == 0) ? x + box.x : mergeVertCut(img, x, nearest) + box.x;
 		cuts.push_back(x);
 	}
 	//insert lowerCuts
@@ -180,7 +206,12 @@ void NumberRecognizer::segment(Blobs& segms, Blob& blob) {
 	std::sort(cuts.begin(), cuts.end());
 	cuts.push_back(box.x + box.width);
 	for (size_t i = 0, n = cuts.size() - 1; i < n; ++i) {
-		segms.add(getSubBlob(blob, cuts[i], cuts[i + 1]));
+		Blob* subBlob = getSubBlob(blob, cuts[i], cuts[i + 1]);
+		if (subBlob->points.empty()) {
+			delete subBlob;
+		} else {
+			segms.add(subBlob);
+		}
 	}
 }
 
@@ -319,26 +350,45 @@ bool NumberRecognizer::isCandidatePattern(int from, int end) {
 	if (valid) {
 		return true;
 	}
-//	return true;
+	return true;
 	Blob* blob = segms.newBlob(from, end);
 	valid = isPeriod(rect, middleLine, *blob);
 	delete blob;
 	return valid;
 }
+
+digit_recognizer::result NumberRecognizer::recognizeBlob(Blobs& segms, int start, int end) {
+	Mat src = segms.cropBlobs(start, end);
+	auto digitMat = makeDigitMat(src);
+	vec_t in;
+	matToVect(digitMat, in);
+	auto rs = recognizer.predict(in);
+	//TODO DEBUG generate sample data
+//	digitMat = 255 - digitMat;
+//	path filePath = "temp/" + chqName;
+//	if (!boost::filesystem::exists(filePath)) {
+//		boost::filesystem::create_directory(filePath);
+//	}
+//	imwrite(filePath.string() + "/-" + std::to_string(start) + "_" + std::to_string(end) + ".png", digitMat);
+//	GeoContext gc(strHeight, segms, start, end);
+//	toFile(gc, filePath.string() + "/-" + std::to_string(start) + "_" + std::to_string(end) + ".txt");
+	return rs;
+}
+
 NumberModel NumberRecognizer::nm;
+GeoContextModel NumberRecognizer::gcm;
 void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, int node) {
 	if (paths.empty()) {
 		return;
 	}
 	int endNode = paths[0].get().back();
+	bool lastNode = node == segms.size();
 	try {
-		Mat pattern = segms.cropBlobs(endNode, node);
-		auto result = recognize1D(pattern);
+		auto result = recognizeBlob(segms, endNode, node);
 		GeoContext gc(strHeight, segms, endNode, node);
-
 		for (Path p : paths) {
 			Path newP = p;
-			float score = result.confidence() + nm.getScore(newP.labels, result.label());
+			float score = result.confidence() + (lastNode ? nm.getFinalScore(newP.labels, result.label()) : nm.getScore(newP.labels, result.label()));
 			newP.add(node, result.label(), score);
 			beam.add(newP);
 		}
@@ -370,6 +420,10 @@ std::string NumberRecognizer::predict() {
 		}
 	}
 	return "";
+}
+
+void NumberRecognizer::genTrainData() {
+	//TODO implement
 }
 
 NumberRecognizer::~NumberRecognizer() {
