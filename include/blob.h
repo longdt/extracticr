@@ -30,8 +30,10 @@ class Blobs {
 private: std::vector <Blob* > blobs;
 public:
 	Blobs();
+	Blobs(Blobs& blobs);
 	size_t size() const;
 	void erase(int index);
+	Blob* detach(int index);
 	Blob* operator[] (int index) const;
 	void clear();
 	void sort(bool (*compFunct)(Blob* blob1, Blob* blob2));

@@ -1,7 +1,10 @@
+#include <GeoContextModel.h>
 #include <opencv2/core/core.hpp>
 #include "cnn/util.h"
 #include <algorithm>
 #include <vector>
+
+using icr::GeoContext;
 using namespace tiny_cnn;
 using namespace std;
 void matToVect(const cv::Mat& input, vec_t &dst);
@@ -10,7 +13,9 @@ string parse_label(string filename);
 
 cv::Mat projectTop(const cv::Mat& src);
 cv::Mat projectBottom(const cv::Mat& src);
-
+void toFile(GeoContext& gc, std::string file);
+int commonArea(cv::Rect r1, cv::Rect r2);
+bool intersect(cv::Rect r1, cv::Rect r2);
 template<class T> class average {
 private:
 	vector<T> values;

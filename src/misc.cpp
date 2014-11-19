@@ -1,4 +1,5 @@
 #include "util/misc.h"
+#include <iosfwd>
 
 void matToVect(const cv::Mat& input, vec_t &dst) {
 	int x_padding = 2;
@@ -53,6 +54,29 @@ cv::Mat projectBottom(const cv::Mat& src) {
 			}
 		}
 	}
+	return dst;
 }
 
+void toFile(GeoContext& gc, std::string file) {
+	std::ofstream ofs(file);
+	vec_t output;
+	gc.getUCGVector(output);
+	if (output.empty()) {
+		return;
+	}
+//	ofs << gc.getStrHeight() << std::endl;
+	ofs << output[0];
+	for (int i = 1; i < output.size(); ++i) {
+		ofs << " " << output[i];
+	}
+	ofs << std::endl;
+	ofs.close();
+}
 
+int commonArea(cv::Rect r1, cv::Rect r2) {
+	return std::max(0, std::min(r1.x + r1.width, r2.x + r2.width) - std::max(r1.x, r2.x)) * std::max(0, std::min(r1.y + r1.height, r2.y + r2.height) - std::max(r1.y, r2.y));
+}
+
+bool intersect(cv::Rect r1, cv::Rect r2) {
+	return std::min(r1.x + r1.width, r2.x + r2.width) > std::max(r1.x, r2.x) && std::min(r1.y + r1.height, r2.y + r2.height) > std::max(r1.y, r2.y);
+}
