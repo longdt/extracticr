@@ -189,7 +189,7 @@ void CARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	blobs.clone(rmBlobs);
 	Rect box = getCARLocation();
 	Rect rm = getRMLocation(rmBlobs);
-	if (rm.width / rm.height > 5) {		//can't detect RM symbol
+	if (rm.height == 0 || rm.width / rm.height > 5) {		//can't detect RM symbol
 		blobs.clear();
 		return;
 	}

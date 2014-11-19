@@ -69,6 +69,14 @@ GeoContext::GeoContext(float strHeight, Blobs& segms, int fromIdx, int endIdx, G
 	box2Segms = boundingRect(prevUcg.box, curUcg.box);
 }
 
+GeoContext::GeoContext(float strHeight, UCGContext& curUcg, UCGContext& prevUcg) : strHeight(strHeight), curUcg(curUcg), prevUcg(prevUcg), hasPrev(true) {
+	box2Segms = boundingRect(prevUcg.box, curUcg.box);
+}
+
+float GeoContext::getStrHeight() {
+	return strHeight;
+}
+
 void GeoContext::getUCGVector(vec_t& output) {
 	output.clear();
 	output.push_back(curUcg.box.height / strHeight);
@@ -112,9 +120,7 @@ void GeoContext::getUIGVector(vec_t& output) {
 	output.push_back(curUcg.meanProjectProfile[1] / strHeight);
 }
 
-int commonArea(cv::Rect r1, cv::Rect r2) {
-	return std::max(0, std::min(r1.x + r1.width, r2.x + r2.width) - std::max(r1.x, r2.x)) * std::max(0, std::min(r1.y + r1.height, r2.y + r2.height) - std::max(r1.y, r2.y));
-}
+
 
 void GeoContext::getBCGVector(vec_t& output) {
 	output.clear();
@@ -177,6 +183,17 @@ float NumberModel::getScore(std::vector<label_t> labels, label_t l) {
 		return -1.0;
 	}
 	return 0;
+}
+
+float NumberModel::getFinalScore(std::vector<label_t> labels, label_t l) {
+	float score = getScore(labels, l);
+	//analytics period point
+	auto iter = std::find(labels.begin(), labels.end(), 10);
+	auto end = labels.end();
+	if (iter + 2 == end) {
+		return score + 0.5;
+	}
+	return score;
 }
 
 } /* namespace icr */

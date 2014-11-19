@@ -1,6 +1,7 @@
 #include "preprocessor.h"
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include "util/misc.h"
 Blob::Blob() : needNewRect(true) {
 }
 
@@ -53,6 +54,10 @@ cv::Point2f Blob::getMassCenter() {
 
 Blobs::Blobs() {}
 
+Blobs::Blobs(Blobs& blobs) {
+	blobs.clone(*this);
+}
+
 size_t Blobs::size() const {
 	return blobs.size();
 }
@@ -61,6 +66,12 @@ void Blobs::erase(int index) {
 	Blob* b = blobs[index];
 	delete b;
 	blobs.erase(blobs.begin() + index);
+}
+
+Blob* Blobs::detach(int index) {
+	Blob* b = blobs[index];
+	blobs.erase(blobs.begin() + index);
+	return b;
 }
 
 Blob* Blobs::operator[] (int index) const {
@@ -360,12 +371,64 @@ void removeSmallBlobs(Blobs& blobs) {
 	while (i < blobs.size()) {
 		cv::Rect bound = blobs[i]->boundingRect();
 		rate = (bound.width + bound.height) / perimaterAverg;
-		if (bound.width <= 3 || bound.height <= 3 || rate < 0.2 || (rate < 0.5 && (bound.y + bound.height) < baseLineAverg * 0.9)) {
+		if (bound.width < 3 || bound.height <= 3 || rate < 0.2 || (rate < 0.5 && (bound.y + bound.height) < baseLineAverg * 0.9)) {
 			blobs.erase(i);
 			continue;
 		}
 		++i;
 	}
+}
+
+void cleanNoises(Blobs& blobs) {
+	Blobs temp(blobs);
+	std::vector<bool> del(temp.size(), false);
+	double perimaterSum = 0;
+	double baseLineSum = 0;
+	for (int i = 0; i < blobs.size(); ++i) {
+		cv::Rect bound = blobs[i]->boundingRect();
+		perimaterSum += (bound.width + bound.height);
+		baseLineSum += bound.y + bound.height;
+	}
+	double perimaterAverg = perimaterSum / blobs.size();
+	double baseLineAverg = baseLineSum / blobs.size();
+	double rate = 0;
+	for (int i = blobs.size() - 1; i >= 0; --i) {
+		cv::Rect bound = blobs[i]->boundingRect();
+		rate = (bound.width + bound.height) / perimaterAverg;
+		if (bound.width < 3 || bound.height <= 3 || rate < 0.2 || (rate < 0.5 && (bound.y + bound.height) < baseLineAverg * 0.9)) {
+			blobs.erase(i);
+			del[i] = true;
+		}
+	}
+	if (blobs.size() == 0) {
+		return;
+	}
+	//add period
+	float strHeight = 0;
+	float middleLine = 0;
+	estHeightVertCenter(blobs, strHeight, middleLine);
+	cv::Rect searchArea = blobs.boundingRect();
+	for (int i = blobs.size() - 1, counter = 0; i > 0; --i) {
+		cv::Rect box = blobs[i]->boundingRect();
+		if (box.y <= middleLine && box.y + box.height > middleLine) {
+			++counter;
+		}
+		if (counter == 4) {
+			searchArea = blobs.boundingRect(i, blobs.size());
+			break;
+		}
+	}
+	for (int i = temp.size() - 1; i >= 0 ; --i) {
+		if (!del[i]) {
+			continue;
+		}
+		cv::Rect box = temp[i]->boundingRect();
+		if (intersect(box, searchArea)) {
+			Blob* b = temp.detach(i);
+			blobs.add(b);
+		}
+	}
+
 }
 
 void groupVertical(Blobs& blobs) {
@@ -406,7 +469,8 @@ void groupVertical(Blobs& blobs) {
 		}
 	}
 	//filter low area
-//	removeSmallBlobs(blobs);
+	//removeSmallBlobs(blobs);
+	cleanNoises(blobs);
 }
 
 bool sortByVertical(Blob* blob1, Blob* blob2) {

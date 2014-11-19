@@ -52,15 +52,18 @@ private:
 public:
 	GeoContext(float strHeight, Blobs& segms, int fromIdx, int endIdx);
 	GeoContext(float strHeight, Blobs& segms, int fromIdx, int endIdx, GeoContext& prev);
+	GeoContext(float strHeight, UCGContext& curUcg, UCGContext& prevUcg);
 	void getUCGVector(vec_t& output);
 	void getUIGVector(vec_t& output);
 	void getBCGVector(vec_t& output);
 	void getBIGVector(vec_t& output);
+	float getStrHeight();
 };
 
 class NumberModel {
 public:
 	float getScore(std::vector<label_t> labels, label_t l);
+	float getFinalScore(std::vector<label_t> labels, label_t l);
 };
 
 } /* namespace icr */
