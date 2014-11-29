@@ -30,7 +30,7 @@ public:
 	public:
 		explicit result(int numLabels);
 		vec_t out;
-		label_t label();
+		label_t label(bool force = false);
 		double confidence();
 		double softmaxScore();
 		double softmaxScore(label_t lb);

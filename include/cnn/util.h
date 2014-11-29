@@ -112,7 +112,7 @@ T* reverse_endian(T* p) {
 
 template<typename T>
 int max_index(const T& vec) {
-    typename T::value_type max_val = -1;
+    typename T::value_type max_val = -9999;
     int max_index = -1;
 
     for (size_t i = 0; i < vec.size(); i++) {

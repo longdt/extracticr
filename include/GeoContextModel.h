@@ -24,14 +24,17 @@ private:
 	network<mse, gradient_descent> ucgModel;
 	network<mse, gradient_descent> bcgModel;
 public:
+	static std::vector<label_t> CLASS_MAP;
 	GeoContextModel();
-	float predict(const GeoContext& content);
+	void predictUnary(GeoContext& context, vec_t& ucg, vec_t& uig);
+	void predictBinary(GeoContext& context, vec_t& bcg, vec_t& big);
 	virtual ~GeoContextModel();
 };
 
 struct UCGContext {
 	//ucg feature
 	cv::Rect box;
+	float innerGap;
 	cv::Point2f gravityCenter;
 	cv::Point2f geoCenter;
 	cv::Point2f gravityCenterLine;
@@ -49,10 +52,12 @@ private:
 	//bcg feature
 	UCGContext prevUcg;
 	cv::Rect box2Segms;
+	void getUCGVector(UCGContext& ucgCtx, vec_t& output);
 public:
 	GeoContext(float strHeight, Blobs& segms, int fromIdx, int endIdx);
 	GeoContext(float strHeight, Blobs& segms, int fromIdx, int endIdx, GeoContext& prev);
 	GeoContext(float strHeight, UCGContext& curUcg, UCGContext& prevUcg);
+	void setPrevContext(GeoContext &ctx);
 	void getUCGVector(vec_t& output);
 	void getUIGVector(vec_t& output);
 	void getBCGVector(vec_t& output);

@@ -22,6 +22,7 @@ extern digit_recognizer recognizer;
 
 namespace icr {
 using namespace cv;
+label_t getBIGLabel(label_t prev, label_t cur);
 NumberRecognizer::NumberRecognizer(Blobs &blobs) {
 	estHeightVertCenter(blobs, strHeight, middleLine);
 	genOverSegm(blobs);
@@ -370,9 +371,39 @@ digit_recognizer::result NumberRecognizer::recognizeBlob(Blobs& segms, int start
 //		boost::filesystem::create_directory(filePath);
 //	}
 //	imwrite(filePath.string() + "/-" + std::to_string(start) + "_" + std::to_string(end) + ".png", digitMat);
-//	GeoContext gc(strHeight, segms, start, end);
-//	toFile(gc, filePath.string() + "/-" + std::to_string(start) + "_" + std::to_string(end) + ".txt");
 	return rs;
+}
+
+std::pair<label_t, float> NumberRecognizer::predictNode(std::vector<label_t>& labels, digit_recognizer::result rs, GeoContext& gc, bool lastNode) {
+	//update NumberModel score
+	for (int i = 0; i < rs.out.size(); ++i) {
+		rs.out[i] =1.1 * rs.out[i] +  0.4f * (lastNode ? nm.getFinalScore(labels, i) : nm.getScore(labels, i));
+	}
+	std::pair<label_t, float> labelScore;
+//	labelScore.first = rs.label(true);
+//	labelScore.second = rs.confidence();
+//	return labelScore;
+	vec_t uigScore, ucgScore;
+	gcm.predictUnary(gc, ucgScore, uigScore);
+	for (int i = 0; i < rs.out.size(); ++i) {
+		int uigLabel = (i < 10 ? 1 : (i == 10 ? 2 : 3));
+		rs.out[i] += 0.3 * ucgScore[GeoContextModel::CLASS_MAP[i]] + uigScore[uigLabel];
+	}
+	//binary class
+	if (!labels.empty()) {
+		vec_t bigScore, bcgScore;
+		gcm.predictBinary(gc, bcgScore, bigScore);
+		label_t prevLabel = labels.back();
+		int bcgIdx = GeoContextModel::CLASS_MAP[prevLabel] * 8;
+		for (int i = 0; i < rs.out.size(); ++i) {
+			rs.out[i] += 0.3 * bcgScore[GeoContextModel::CLASS_MAP[i] + bcgIdx];
+			label_t bigLabel = getBIGLabel(prevLabel, i);
+			rs.out[i] += 0.1 * bigScore[bigLabel];
+		}
+	}
+	labelScore.first = rs.label(true);
+	labelScore.second = rs.confidence();
+	return labelScore;
 }
 
 NumberModel NumberRecognizer::nm;
@@ -388,8 +419,13 @@ void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, in
 		GeoContext gc(strHeight, segms, endNode, node);
 		for (Path p : paths) {
 			Path newP = p;
-			float score = result.confidence() + (lastNode ? nm.getFinalScore(newP.labels, result.label()) : nm.getScore(newP.labels, result.label()));
-			newP.add(node, result.label(), score);
+			int pathSize = newP.path.size();
+			if (pathSize >= 2) {
+				GeoContext prevGC(strHeight, segms, newP.path[pathSize - 2], newP.path[pathSize - 1]);
+				gc.setPrevContext(prevGC);
+			}
+			std::pair<label_t, float> rs = predictNode(newP.labels, result, gc, lastNode);
+			newP.add(node, rs.first, rs.second);
 			beam.add(newP);
 		}
 	} catch (cv::Exception& e) {
@@ -413,17 +449,114 @@ std::string NumberRecognizer::predict() {
 		if (end > segms.size()) {
 			end = segms.size();
 		}
+		//TODO Debug
+		std::string bestP = bestPath(paths).string();
+		if (bestP.compare("339") == 0) {
+			int stub = 0;
+		}
+		std::cout << "DEBUG: " << bestP << std::endl;
 		for (int i = endNode + 1; i <= end; ++i) {
 			if (isCandidatePattern(endNode, i)) {
 				expandPath(beam, paths, i);
 			}
 		}
+
 	}
 	return "";
 }
 
-void NumberRecognizer::genTrainData() {
-	//TODO implement
+int findLabelSegment(std::vector<Segment>& segms, int start, int end) {
+	for (Segment s : segms) {
+		if (s.start == start && s.end == end) {
+			return s.label;
+		}
+	}
+	return -1;
+}
+
+label_t getBIGLabel(label_t prev, label_t cur) {
+	if (prev < 10 && cur < 10) {
+		return 1;
+	} else if (prev < 10 && cur == 10) {
+		return 2;
+	} else if (prev < 10 && cur == 11) {
+		return 3;
+	} else if (prev == 10 && cur < 10) {
+		return 4;
+	} else if (prev == 11 && cur < 10) {
+		return 5;
+	} else {
+		return 0;
+	}
+}
+
+void NumberRecognizer::genTrainData(std::vector<Segment>& segmsCnf, int dataType, std::vector<vec_t>& inputs, std::vector<label_t>& labels) {
+	vec_t in;
+	if (dataType == ICR_UCG) {
+		for (Segment segm : segmsCnf) {
+			GeoContext gc(strHeight, segms, segm.start, segm.end);
+			gc.getUCGVector(in);
+			inputs.push_back(in);
+			labels.push_back(segm.label);
+		}
+	} else if (dataType == ICR_UIG) {
+		int numSegms = segms.size();
+		for (int start = 0; start < segms.size() - 1; ++start) {
+			for (int end = start + 1, n = std::min(start + 4, numSegms); end <= n; ++end) {
+				if (isCandidatePattern(start, end)) {
+					GeoContext gc(strHeight, segms, start, end);
+					gc.getUIGVector(in);
+					inputs.push_back(in);
+					int label = findLabelSegment(segmsCnf, start, end);
+					if (label == -1) {
+						label = 0;
+					} else if (label < 10) {
+						label = 1;
+					} else if (label == 10) {
+						label = 2;
+					} else {
+						label = 3;
+					}
+					labels.push_back(label);
+				}
+			}
+		}
+	} else if (dataType == ICR_BCG && !segmsCnf.empty()) {
+		Segment segm = segmsCnf[0];
+		GeoContext prev(strHeight, segms, segm.start, segm.end);
+		for (int i = 1; i < segmsCnf.size(); ++i) {
+			label_t label = GeoContextModel::CLASS_MAP[segm.label] * 8;
+			segm = segmsCnf[i];
+			label += GeoContextModel::CLASS_MAP[segm.label];
+			GeoContext gc(strHeight, segms, segm.start, segm.end, prev);
+			gc.getBCGVector(in);
+			inputs.push_back(in);
+			labels.push_back(label);
+			prev = gc;
+		}
+	} else if (dataType == ICR_BIG && !segmsCnf.empty()) {
+		Segment segm = segmsCnf[0];
+		GeoContext prev(strHeight, segms, segm.start, segm.end);
+		for (int i = 1; i < segmsCnf.size(); ++i) {
+			label_t label = getBIGLabel(segm.label, segmsCnf[i].label);
+			segm = segmsCnf[i];
+			GeoContext gc(strHeight, segms, segm.start, segm.end, prev);
+			gc.getBIGVector(in);
+			inputs.push_back(in);
+			labels.push_back(label);
+			prev = gc;
+		}
+	} else if (dataType == ICR_BIG_IGNORE && !segmsCnf.empty()) {
+		for (int i = 0; i < segmsCnf.size(); i += 2) {
+			Segment segm = segmsCnf[i];
+			GeoContext prev(strHeight, segms, segm.start, segm.end);
+			segm = segmsCnf[i + 1];
+			GeoContext gc(strHeight, segms, segm.start, segm.end, prev);
+			gc.getBIGVector(in);
+			inputs.push_back(in);
+			labels.push_back(0);
+		}
+	}
 }
 
 NumberRecognizer::~NumberRecognizer() {

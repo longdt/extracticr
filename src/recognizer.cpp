@@ -186,8 +186,8 @@ digit_recognizer::result::result(int numLabels) : index(-1), softmaxScoreSum(-1)
 	softmaxScores.resize(numLabels, -1);
 }
 
-label_t digit_recognizer::result::label() {
-	if (index == -1) {
+label_t digit_recognizer::result::label(bool force) {
+	if (index == -1 || force) {
 		index = tiny_cnn::max_index(out);
 	}
 	return index;
