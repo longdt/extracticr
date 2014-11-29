@@ -15,6 +15,7 @@ class Blob {
 private:
 	cv::Rect bound;
 	bool needNewRect;
+	float innerGap;
 public:
 	Blob();
 	std::vector<cv::Point2i> points;
@@ -23,6 +24,7 @@ public:
 	void add(const cv::Point2i& point);
 	void setModify(bool flag);
 	void move(int x, int y);
+	float getInnerGap() const;
 	cv::Point2f getMassCenter();
 };
 
@@ -64,6 +66,6 @@ bool sortByVertical(Blob* blob1, Blob* blob2);
 void sortBlobsByVertical(Blobs &blobs);
 void defragment(cv::Mat& strImg, Blobs &blobs);
 
-double distanceBlobs(Blob& blob1, Blob& blob2);
-double distanceBlobs(std::vector<cv::Point2i >& blob1, std::vector<cv::Point2i >& blob2);
+double distanceBlobs(const Blob& blob1, const Blob& blob2);
+double distanceBlobs(const std::vector<cv::Point2i >& blob1, const std::vector<cv::Point2i >& blob2);
 #endif /* BLOB_H_ */

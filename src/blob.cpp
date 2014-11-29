@@ -2,7 +2,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include "util/misc.h"
-Blob::Blob() : needNewRect(true) {
+Blob::Blob() : needNewRect(true), innerGap(0) {
 }
 
 cv::Rect Blob::boundingRect() {
@@ -14,11 +14,18 @@ cv::Rect Blob::boundingRect() {
 }
 void Blob::add(const Blob& other) {
 	needNewRect = true;
+	if (!points.empty() && !other.points.empty()) {
+		innerGap += distanceBlobs(*this, other);
+	}
 	points.insert(points.end(), other.points.begin(), other.points.end());
 }
 void Blob::add(const cv::Point2i& point) {
 	needNewRect = true;
 	points.push_back(point);
+}
+
+float Blob::getInnerGap() const {
+	return innerGap;
 }
 
 void Blob::setModify(bool flag) {
@@ -428,7 +435,7 @@ void cleanNoises(Blobs& blobs) {
 			blobs.add(b);
 		}
 	}
-
+	blobs.sort(sortByVertical);
 }
 
 void groupVertical(Blobs& blobs) {
@@ -554,7 +561,7 @@ inline double _distance(cv::Point2i p1, cv::Point2i p2) {
 	return sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
 }
 
-double distanceBlobs(std::vector<cv::Point2i >& blob1, std::vector<cv::Point2i >& blob2) {
+double distanceBlobs(const std::vector<cv::Point2i >& blob1, const std::vector<cv::Point2i >& blob2) {
 	double min = INT_MAX;
 	double temp = 0;
 	for (auto &p1 : blob1) {
@@ -567,6 +574,6 @@ double distanceBlobs(std::vector<cv::Point2i >& blob1, std::vector<cv::Point2i >
 	return min;
 }
 
-double distanceBlobs(Blob& blob1, Blob& blob2) {
+double distanceBlobs(const Blob& blob1, const Blob& blob2) {
 	return distanceBlobs(blob1.points, blob2.points);
 }

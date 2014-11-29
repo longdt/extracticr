@@ -13,7 +13,7 @@ std::vector<DigitWidthStatistic> digitStatistics;
 std::string chqName;
 int main()
 {
-	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
+//	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
 	path p("/home/thienlong/cheque/500 Cheques/ValidChq");
 	if (!exists(p) || !is_directory(p)) {
 		return 0;
@@ -21,13 +21,16 @@ int main()
 	icr::ICREngine engine;
 	int skip = 0;
 	int counter = 0;
+	int end = 1000;
 	for (directory_iterator iter(p), iterend; iter != iterend; ++iter) {
 		++counter;
 		if (counter <= skip) {
 			continue;
+		} else if (counter > end) {
+			break;
 		}
-//		cv::Mat cheque = cv::imread(iter->path().string(), 0);
-		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/chq_00458_00.jpeg", 0);
+		cv::Mat cheque = cv::imread(iter->path().string(), 0);
+//		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/chq_00568_00.jpeg", 0);
 		if (cheque.empty())
 			return -1;
 		chqName = iter->path().filename().string();
