@@ -365,12 +365,12 @@ digit_recognizer::result NumberRecognizer::recognizeBlob(Blobs& segms, int start
 	matToVect(digitMat, in);
 	auto rs = recognizer.predict(in);
 	//TODO DEBUG generate sample data
-//	digitMat = 255 - digitMat;
-//	path filePath = "temp/" + chqName;
-//	if (!boost::filesystem::exists(filePath)) {
-//		boost::filesystem::create_directory(filePath);
-//	}
-//	imwrite(filePath.string() + "/-" + std::to_string(start) + "_" + std::to_string(end) + ".png", digitMat);
+	digitMat = 255 - digitMat;
+	path filePath = "temp/" + chqName;
+	if (!boost::filesystem::exists(filePath)) {
+		boost::filesystem::create_directory(filePath);
+	}
+	imwrite(filePath.string() + "/-" + std::to_string(start) + "_" + std::to_string(end) + ".png", digitMat);
 	return rs;
 }
 
@@ -412,11 +412,11 @@ void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, in
 	if (paths.empty()) {
 		return;
 	}
-	int endNode = paths[0].get().back();
+	int startNode = paths[0].get().back();
 	bool lastNode = node == segms.size();
 	try {
-		auto result = recognizeBlob(segms, endNode, node);
-		GeoContext gc(strHeight, segms, endNode, node);
+		auto result = recognizeBlob(segms, startNode, node);
+		GeoContext gc(strHeight, segms, startNode, node);
 		for (Path p : paths) {
 			Path newP = p;
 			int pathSize = newP.path.size();
@@ -438,11 +438,13 @@ std::string NumberRecognizer::predict() {
 	Path start;
 	start.init(0);
 	beam.add(start);
+	Path bestP;
 	while (!beam.empty()) {
 		std::vector<Path> paths = beam.popLowerestNodes();
 		int endNode = paths[0].get().back();
 		if (endNode == segms.size()) {
-			return bestPath(paths).string();
+			bestP = bestPath(paths);
+			return bestP.string();
 		}
 		//expand node
 		int end = endNode + 4;
@@ -450,11 +452,11 @@ std::string NumberRecognizer::predict() {
 			end = segms.size();
 		}
 		//TODO Debug
-		std::string bestP = bestPath(paths).string();
-		if (bestP.compare("339") == 0) {
+		bestP = bestPath(paths);
+		if (bestP.string().compare("2,720") == 0) {
 			int stub = 0;
 		}
-		std::cout << "DEBUG: " << bestP << std::endl;
+		std::cout << "DEBUG: " << bestP.string() << std::endl;
 		for (int i = endNode + 1; i <= end; ++i) {
 			if (isCandidatePattern(endNode, i)) {
 				expandPath(beam, paths, i);
@@ -500,26 +502,26 @@ void NumberRecognizer::genTrainData(std::vector<Segment>& segmsCnf, int dataType
 			labels.push_back(segm.label);
 		}
 	} else if (dataType == ICR_UIG) {
-		int numSegms = segms.size();
-		for (int start = 0; start < segms.size() - 1; ++start) {
-			for (int end = start + 1, n = std::min(start + 4, numSegms); end <= n; ++end) {
-				if (isCandidatePattern(start, end)) {
-					GeoContext gc(strHeight, segms, start, end);
-					gc.getUIGVector(in);
-					inputs.push_back(in);
-					int label = findLabelSegment(segmsCnf, start, end);
-					if (label == -1) {
-						label = 0;
-					} else if (label < 10) {
-						label = 1;
-					} else if (label == 10) {
-						label = 2;
-					} else {
-						label = 3;
-					}
-					labels.push_back(label);
-				}
+		for (Segment segm : segmsCnf) {
+			GeoContext gc(strHeight, segms, segm.start, segm.end);
+			gc.getUIGVector(in);
+			inputs.push_back(in);
+			int label = segm.label;
+			if (label < 10) {
+				label = 1;
+			} else if (label == 10) {
+				label = 2;
+			} else {
+				label = 3;
 			}
+			labels.push_back(label);
+		}
+	} else if (dataType == ICR_UIG_IGNORE) {
+		for (Segment segm : segmsCnf) {
+			GeoContext gc(strHeight, segms, segm.start, segm.end);
+			gc.getUIGVector(in);
+			inputs.push_back(in);
+			labels.push_back(0);
 		}
 	} else if (dataType == ICR_BCG && !segmsCnf.empty()) {
 		Segment segm = segmsCnf[0];

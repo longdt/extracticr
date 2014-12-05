@@ -30,7 +30,7 @@ int main()
 			break;
 		}
 		cv::Mat cheque = cv::imread(iter->path().string(), 0);
-//		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/chq_00568_00.jpeg", 0);
+//		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/chq_00532_00.jpeg", 0);
 		if (cheque.empty())
 			return -1;
 		chqName = iter->path().filename().string();
