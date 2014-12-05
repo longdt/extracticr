@@ -25,6 +25,7 @@ struct Segment {
 #define ICR_UIG 2
 #define ICR_BIG 3
 #define ICR_BIG_IGNORE 4
+#define ICR_UIG_IGNORE 5
 
 class Path;
 class Beam;

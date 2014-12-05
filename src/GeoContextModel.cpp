@@ -253,6 +253,8 @@ float NumberModel::getScore(std::vector<label_t> labels, label_t l) {
 	auto r = std::find(labels.rbegin(), labels.rend(), 11);
 	if (r != labels.rend() && std::distance(r.base(), labels.end()) != 4) {
 		return -1.0;
+	} else if (l == 11 && labels.size() >= 4 && labels[labels.size() - 4] != 11) {
+		return -1.0;
 	}
 	return 0;
 }
@@ -266,7 +268,12 @@ float NumberModel::getFinalScore(std::vector<label_t> labels, label_t l) {
 	auto iter = std::find(labels.begin(), labels.end(), 10);
 	auto end = labels.end();
 	if (iter != end) {
-		return iter + 2 != end ? score - 1 : score + 1;
+		return iter + 2 != end ? score - 1 : score + 0;
+	}
+	//delimiter
+	auto r = std::find(labels.rbegin(), labels.rend(), 11);
+	if (r != labels.rend() && std::distance(r.base(), labels.end()) != 3) {
+		return score - 1.0;
 	}
 	return score;
 }
