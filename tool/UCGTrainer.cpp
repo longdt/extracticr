@@ -42,7 +42,7 @@ void loadSegmConfig(std::unordered_map<std::string, std::vector<Segment>>& segmS
 
 void loadTrainData(std::vector<vec_t>& inputs, std::vector<label_t>& labels) {
 	std::unordered_map<std::string, std::vector<Segment>> segmStrs;
-	loadSegmConfig(segmStrs, "segments.txt");
+	loadSegmConfig(segmStrs, "train/segments.txt");
 	for (auto it = segmStrs.begin(), end = segmStrs.end(); it != end; ++it) {
 		std::cout << it->first << std::endl;
 		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/" + it->first, 0);

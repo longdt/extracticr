@@ -63,6 +63,7 @@ public:
 	void getBCGVector(vec_t& output);
 	void getBIGVector(vec_t& output);
 	float getStrHeight();
+	cv::Rect getCurBoundingRect();
 };
 
 class NumberModel {

@@ -17,9 +17,13 @@
 namespace icr {
 
 class ICREngine {
+private:
+	int trainWeight(std::vector<float>& weights);
 public:
 	ICREngine();
 	std::string recognite(cv::Mat& cheque);
+	void trainWeight();
+	void trainWeightV2();
 	virtual ~ICREngine();
 };
 

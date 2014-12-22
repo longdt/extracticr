@@ -23,17 +23,20 @@ extern digit_recognizer recognizer;
 namespace icr {
 using namespace cv;
 label_t getBIGLabel(label_t prev, label_t cur);
-NumberRecognizer::NumberRecognizer(Blobs &blobs) {
+std::vector<float> DEFAULT_WEIGHT{0.87, 0.6, 0.99, 0.62, 0.74};
+NumberRecognizer::NumberRecognizer(Blobs &blobs) : NumberRecognizer(blobs, DEFAULT_WEIGHT){
+}
+
+NumberRecognizer::NumberRecognizer(Blobs &blobs, std::vector<float>& weights) : weights(weights) {
 	estHeightVertCenter(blobs, strHeight, middleLine);
 	genOverSegm(blobs);
 	//TODO debug
-	cv::Mat car = drawBlobs(blobs);
-	line(car, Point(0, middleLine), Point(car.cols -1, middleLine), Scalar(255, 0, 0));
-	cv::imshow("hwimg", car);
-	Mat img = drawBlobs(segms);
-	namedWindow("segms", WINDOW_NORMAL);
-	imshow("segms", img);
-//	waitKey();
+//	cv::Mat car = drawBlobs(blobs);
+//	line(car, Point(0, middleLine), Point(car.cols -1, middleLine), Scalar(255, 0, 0));
+//	cv::imshow("hwimg", car);
+//	Mat img = drawBlobs(segms);
+//	namedWindow("segms", WINDOW_NORMAL);
+//	imshow("segms", img);
 }
 
 
@@ -346,8 +349,11 @@ Path bestPath(std::vector<Path>& paths) {
 
 bool NumberRecognizer::isCandidatePattern(int from, int end) {
 	Rect rect = segms.boundingRect(from, end);
+	if (rect.width >= 2.4 * strHeight) {
+		return false;
+	}
 	//verify condition
-	bool valid = (rect.height >= strHeight / 3.0f) && (rect.width < 2.4 * strHeight) && (rect.width / (float) rect.height < 3);
+	bool valid = (rect.height >= strHeight / 3.0f) && (rect.width / (float) rect.height < 3);
 	if (valid) {
 		return true;
 	}
@@ -365,19 +371,20 @@ digit_recognizer::result NumberRecognizer::recognizeBlob(Blobs& segms, int start
 	matToVect(digitMat, in);
 	auto rs = recognizer.predict(in);
 	//TODO DEBUG generate sample data
-	digitMat = 255 - digitMat;
-	path filePath = "temp/" + chqName;
-	if (!boost::filesystem::exists(filePath)) {
-		boost::filesystem::create_directory(filePath);
-	}
-	imwrite(filePath.string() + "/-" + std::to_string(start) + "_" + std::to_string(end) + ".png", digitMat);
+//	digitMat = 255 - digitMat;
+//	path filePath = "temp/" + chqName;
+//	if (!boost::filesystem::exists(filePath)) {
+//		boost::filesystem::create_directory(filePath);
+//	}
+//	imwrite(filePath.string() + "/-" + std::to_string(start) + "_" + std::to_string(end) + ".png", digitMat);
 	return rs;
 }
 
-std::pair<label_t, float> NumberRecognizer::predictNode(std::vector<label_t>& labels, digit_recognizer::result rs, GeoContext& gc, bool lastNode) {
+std::pair<label_t, float> NumberRecognizer::predictNode(std::vector<label_t>& labels, digit_recognizer::result rs, GeoContext& gc, bool lastNode, std::pair<label_t, float>* secChoice) {
 	//update NumberModel score
+	float wi = 1.0;//(gc.getCurBoundingRect().width / strHeight);
 	for (int i = 0; i < rs.out.size(); ++i) {
-		rs.out[i] =1.1 * rs.out[i] +  0.4f * (lastNode ? nm.getFinalScore(labels, i) : nm.getScore(labels, i));
+		rs.out[i] = wi * rs.out[i] +  weights[0] * (lastNode ? nm.getFinalScore(labels, i) : nm.getScore(labels, i));
 	}
 	std::pair<label_t, float> labelScore;
 //	labelScore.first = rs.label(true);
@@ -387,7 +394,7 @@ std::pair<label_t, float> NumberRecognizer::predictNode(std::vector<label_t>& la
 	gcm.predictUnary(gc, ucgScore, uigScore);
 	for (int i = 0; i < rs.out.size(); ++i) {
 		int uigLabel = (i < 10 ? 1 : (i == 10 ? 2 : 3));
-		rs.out[i] += 0.3 * ucgScore[GeoContextModel::CLASS_MAP[i]] + uigScore[uigLabel];
+		rs.out[i] += weights[1] * ucgScore[GeoContextModel::CLASS_MAP[i]] + weights[2] * uigScore[uigLabel];
 	}
 	//binary class
 	if (!labels.empty()) {
@@ -396,13 +403,27 @@ std::pair<label_t, float> NumberRecognizer::predictNode(std::vector<label_t>& la
 		label_t prevLabel = labels.back();
 		int bcgIdx = GeoContextModel::CLASS_MAP[prevLabel] * 8;
 		for (int i = 0; i < rs.out.size(); ++i) {
-			rs.out[i] += 0.3 * bcgScore[GeoContextModel::CLASS_MAP[i] + bcgIdx];
+			rs.out[i] += weights[3] * bcgScore[GeoContextModel::CLASS_MAP[i] + bcgIdx];
 			label_t bigLabel = getBIGLabel(prevLabel, i);
-			rs.out[i] += 0.1 * bigScore[bigLabel];
+			rs.out[i] += weights[4] * bigScore[bigLabel];
 		}
 	}
 	labelScore.first = rs.label(true);
 	labelScore.second = rs.confidence();
+	//find second choice
+	if (secChoice != NULL) {
+		float bestScore = -9999;
+		int bestLabel = 0, secLabel = 0;
+		for (int i = 0; i < rs.out.size(); ++i) {
+			if (rs.out[i] > bestScore) {
+				bestScore = rs.out[i];
+				secLabel = bestLabel;
+				bestLabel = i;
+			}
+		}
+		secChoice->first = secLabel;
+		secChoice->second = rs.out[secLabel];
+	}
 	return labelScore;
 }
 
@@ -419,14 +440,18 @@ void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, in
 		GeoContext gc(strHeight, segms, startNode, node);
 		for (Path p : paths) {
 			Path newP = p;
+			Path secP = p;
 			int pathSize = newP.path.size();
 			if (pathSize >= 2) {
 				GeoContext prevGC(strHeight, segms, newP.path[pathSize - 2], newP.path[pathSize - 1]);
 				gc.setPrevContext(prevGC);
 			}
-			std::pair<label_t, float> rs = predictNode(newP.labels, result, gc, lastNode);
+			std::pair<label_t, float> rsSec;
+			std::pair<label_t, float> rs = predictNode(newP.labels, result, gc, lastNode, &rsSec);
 			newP.add(node, rs.first, rs.second);
 			beam.add(newP);
+			secP.add(node, rsSec.first, rsSec.second);
+			beam.add(secP);
 		}
 	} catch (cv::Exception& e) {
 	}
@@ -452,11 +477,11 @@ std::string NumberRecognizer::predict() {
 			end = segms.size();
 		}
 		//TODO Debug
-		bestP = bestPath(paths);
-		if (bestP.string().compare("2,720") == 0) {
-			int stub = 0;
-		}
-		std::cout << "DEBUG: " << bestP.string() << std::endl;
+//		bestP = bestPath(paths);
+//		if (bestP.string().compare("2,720") == 0) {
+//			int stub = 0;
+//		}
+//		std::cout << "DEBUG: " << bestP.string() << std::endl;
 		for (int i = endNode + 1; i <= end; ++i) {
 			if (isCandidatePattern(endNode, i)) {
 				expandPath(beam, paths, i);

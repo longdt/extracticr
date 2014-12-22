@@ -31,7 +31,7 @@ void loadSegmConfig(
 void loadBCGTrainData(std::vector<vec_t>& inputs,
 		std::vector<label_t>& labels) {
 	std::unordered_map<std::string, std::vector<Segment>> segmStrs;
-	loadSegmConfig(segmStrs, "segments.txt");
+	loadSegmConfig(segmStrs, "train/segments.txt");
 	for (auto it = segmStrs.begin(), end = segmStrs.end(); it != end; ++it) {
 		std::cout << it->first << std::endl;
 		cv::Mat cheque = cv::imread(
