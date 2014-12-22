@@ -3,6 +3,7 @@
 #include "cnn/util.h"
 #include <algorithm>
 #include <vector>
+#include <unordered_map>
 
 using icr::GeoContext;
 using namespace tiny_cnn;
@@ -10,7 +11,7 @@ using namespace std;
 void matToVect(const cv::Mat& input, vec_t &dst);
 
 string parse_label(string filename);
-
+void loadChequeLabel(string filename, unordered_map<string, string>& dst);
 cv::Mat projectTop(const cv::Mat& src);
 cv::Mat projectBottom(const cv::Mat& src);
 void toFile(GeoContext& gc, std::string file);

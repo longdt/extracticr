@@ -80,3 +80,14 @@ int commonArea(cv::Rect r1, cv::Rect r2) {
 bool intersect(cv::Rect r1, cv::Rect r2) {
 	return std::min(r1.x + r1.width, r2.x + r2.width) > std::max(r1.x, r2.x) && std::min(r1.y + r1.height, r2.y + r2.height) > std::max(r1.y, r2.y);
 }
+
+void loadChequeLabel(string file, unordered_map<string, string>& dst) {
+	std::ifstream ifs(file);
+	std::string key;
+	std::string label;
+	while (ifs >> key) {
+		if (ifs >> label) {
+			dst[key] = label;
+		}
+	}
+}

@@ -74,7 +74,7 @@ digit_recognizer::digit_recognizer(bool load_weight) : C1(32, 32, 5, 1, 6), S2(2
 
 	std::cout << "load models..." << std::endl;
 	if (load_weight) {
-		std::ifstream ifs("LeNet-weights");
+		std::ifstream ifs("models/LeNet-weights");
 		if (ifs.is_open()) {
 			ifs >> C1;
 			ifs >> S2;

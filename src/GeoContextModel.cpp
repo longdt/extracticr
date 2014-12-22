@@ -18,7 +18,7 @@ GeoContextModel::GeoContextModel() {
 	auto F2 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(20, 4);
 	uigModel.add(F1);
 	uigModel.add(F2);
-	std::ifstream uigfs("uig");
+	std::ifstream uigfs("models/uig");
 	if (uigfs.is_open()) {
 		uigfs >> *F1 >> *F2;
 		uigfs.close();
@@ -28,7 +28,7 @@ GeoContextModel::GeoContextModel() {
 	F2 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(100, 8);
 	ucgModel.add(F1);
 	ucgModel.add(F2);
-	std::ifstream ucgfs("ucg");
+	std::ifstream ucgfs("models/ucg");
 	if (ucgfs.is_open()) {
 		ucgfs >> *F1 >> *F2;
 		ucgfs.close();
@@ -38,7 +38,7 @@ GeoContextModel::GeoContextModel() {
 	F2 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(120, 64);
 	bcgModel.add(F1);
 	bcgModel.add(F2);
-	std::ifstream bcgfs("bcg");
+	std::ifstream bcgfs("models/bcg");
 	if (bcgfs.is_open()) {
 		bcgfs >> *F1 >> *F2;
 		bcgfs.close();
@@ -48,7 +48,7 @@ GeoContextModel::GeoContextModel() {
 	F2 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(80, 6);
 	bigModel.add(F1);
 	bigModel.add(F2);
-	std::ifstream bigfs("big");
+	std::ifstream bigfs("models/big");
 	if (bigfs.is_open()) {
 		bigfs >> *F1 >> *F2;
 		bigfs.close();
@@ -133,6 +133,10 @@ void GeoContext::setPrevContext(GeoContext &ctx) {
 
 float GeoContext::getStrHeight() {
 	return strHeight;
+}
+
+cv::Rect GeoContext::getCurBoundingRect() {
+	return curUcg.box;
 }
 
 void GeoContext::getUCGVector(vec_t& output) {

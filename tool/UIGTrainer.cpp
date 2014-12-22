@@ -28,9 +28,9 @@ void loadSegmConfig(
 void loadUIGTrainData(std::vector<vec_t>& inputs,
 		std::vector<label_t>& labels) {
 	std::unordered_map<std::string, std::vector<Segment>> segmStrs;
-	loadSegmConfig(segmStrs, "segments.txt");
+	loadSegmConfig(segmStrs, "train/segments.txt");
 	std::unordered_map<std::string, std::vector<Segment>> ignoreSegms;
-	loadSegmConfig(ignoreSegms, "uig-ignore.txt");
+	loadSegmConfig(ignoreSegms, "train/uig-ignore.txt");
 	for (auto it = segmStrs.begin(), end = segmStrs.end(); it != end; ++it) {
 		std::cout << it->first << std::endl;
 		cv::Mat cheque = cv::imread(
@@ -85,7 +85,7 @@ int uigmain(int argc, char **argv) {
 				std::cout << mynet.optimizer().alpha << "," << res.num_success << "/" << res.num_total << std::endl;
 				counter = (counter + 1) % 2;
 				if (counter == 0) {
-//					mynet.optimizer().alpha *= 0.9; // decay learning rate
+					mynet.optimizer().alpha *= 0.99; // decay learning rate
 				}
 				mynet.optimizer().alpha = std::max(0.0001, mynet.optimizer().alpha);
 
