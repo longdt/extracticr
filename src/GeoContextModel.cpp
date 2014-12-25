@@ -245,7 +245,9 @@ void GeoContext::getBIGVector(vec_t& output) {
 
 float NumberModel::getScore(std::vector<label_t> labels, label_t l) {
 	//manual score implementation
-	if (labels.empty() && (l >= 10 || l == 0)) {
+	if (labels.empty() && l >= 10) {
+		return -2.0;
+	} else if (labels.size() == 1 && labels[0] == 0 && l != 10) {
 		return -2.0;
 	}
 	if (l < 10) {
