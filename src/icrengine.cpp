@@ -14,7 +14,7 @@ std::string chqName;
 int main()
 {
 //	computeDigitWidth("/media/thienlong/linux/CAR/cvl-digits/train", digitStatistics);
-	path p("/home/thienlong/cheque/500 Cheques/ValidChq");
+	path p("/home/thienlong/cheque/500 Cheques/InvalidChq");
 	if (!exists(p) || !is_directory(p)) {
 		return 0;
 	}
