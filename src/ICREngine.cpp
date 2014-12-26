@@ -75,6 +75,15 @@ int detectTerminator(Blobs& blobs) {
 	return -1;
 }
 
+void removeTerminator(Blobs& blobs) {
+	int idx = detectTerminator(blobs);
+	if (idx > 0) {
+		for (int i = blobs.size() - 1; i >= idx; --i) {
+			blobs.erase(i);
+		}
+	}
+}
+
 int detectPeriod(Blobs& blobs) {
 	cv::Rect rect = blobs.boundingRect();
 	int middleLine = rect.y + rect.height / 2;
@@ -105,6 +114,7 @@ std::string ICREngine::recognite(cv::Mat& cheque) {
 	loc = blobs.boundingRect();
 //	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
 	groupVertical(blobs);
+	removeTerminator(blobs);
 //	defragment(car, blobs);
 	NumberRecognizer nr(blobs);
 	//return extractDigit(blobs, angle);
@@ -202,6 +212,7 @@ int ICREngine::trainWeight(std::vector<float>& weights) {
 		loc = blobs.boundingRect();
 	//	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
 		groupVertical(blobs);
+		removeTerminator(blobs);
 	//	defragment(car, blobs);
 		NumberRecognizer nr(blobs, weights);
 		//return extractDigit(blobs, angle);
