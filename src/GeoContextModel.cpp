@@ -252,6 +252,8 @@ float NumberModel::getScore(std::vector<label_t> labels, label_t l) {
 	}
 	if (l < 10) {
 		return 0;
+	} else if (!labels.empty() && labels.back() >= 10) {
+		return -2.0;
 	}
 	if (std::find(labels.begin(), labels.end(), 10) != labels.end()) {
 		return -1.0;
