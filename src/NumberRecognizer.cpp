@@ -23,7 +23,7 @@ extern digit_recognizer recognizer;
 namespace icr {
 using namespace cv;
 label_t getBIGLabel(label_t prev, label_t cur);
-std::vector<float> DEFAULT_WEIGHT{0.58, 0.04, 0.96, 0.61, 0.57};
+std::vector<float> DEFAULT_WEIGHT{0.87, 0.94, 1.99, 0.68, 0.82};
 NumberRecognizer::NumberRecognizer(Blobs &blobs) : NumberRecognizer(blobs, DEFAULT_WEIGHT){
 }
 

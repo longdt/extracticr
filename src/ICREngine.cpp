@@ -150,7 +150,7 @@ void ICREngine::trainWeightV2() {
 	unsigned long seed = time(NULL);
 	std::default_random_engine generator(seed);
 	float maxRange = 100;
-	std::uniform_int_distribution<int> distribution(0, (int)maxRange);
+	std::uniform_int_distribution<int> distribution(0, (int)maxRange * 2);
 	int wSize = 5;
 	std::vector<float> weights(wSize, 0);
 	for (int i = 0; i < wSize; ++i) {
