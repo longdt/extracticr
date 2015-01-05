@@ -55,15 +55,15 @@ cv::Rect CARLocator::getCARLocation() {
 	  line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0, 255), 1, CV_AA);
 	  if (l[0] == l[2] && std::abs(l[1] - l[3]) > mpr.height * 0.5 && intersect(l[1], l[3], mpr)) {
 		  if (l[0] < mpr.x + mpr.width / 2) {
-			  minX = std::max(l[0], mpr.x);
+			  minX = std::max(std::max(l[0], mpr.x), minX);
 		  } else {
-			  maxX = std::min(l[0], mpr.x + mpr.width);
+			  maxX = std::min(std::min(l[0], mpr.x + mpr.width), maxX);
 		  }
 	  } else if (l[1] == l[3] && std::abs(l[0] - l[2]) > mpr.width * 0.3) {
 		  if (l[1] < mpr.y + mpr.height / 2) {
-			  minY = std::max(l[1], mpr.y);
+			  minY = std::max(std::max(l[1], mpr.y), minY);
 		  } else {
-			  maxY = std::min(l[1], mpr.y + mpr.height);
+			  maxY = std::min(std::min(l[1], mpr.y + mpr.height), maxY);
 		  }
 	  }
 	}
