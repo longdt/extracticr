@@ -74,7 +74,7 @@ int detectTerminator(Blobs& blobs) {
 			secondHeighest = rect.height;
 		}
 	}
-	if (firstHeighest / (float) secondHeighest > 2) {
+	if (firstHeighest / (float) secondHeighest >= 1.8) {
 		return index;
 	}
 	return -1;
@@ -118,9 +118,12 @@ std::string ICREngine::recognite(cv::Mat& cheque) {
 	float angle = deslant(loc.size(), blobs);
 	loc = blobs.boundingRect();
 //	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
-	groupVertical(blobs);
 	removeTerminator(blobs);
+	groupVertical(blobs);
 //	defragment(car, blobs);
+	if (blobs.size() == 0) {
+		return "";
+	}
 	NumberRecognizer nr(blobs);
 	//return extractDigit(blobs, angle);
 	return nr.predict();
@@ -216,9 +219,12 @@ int ICREngine::trainWeight(std::vector<float>& weights) {
 		float angle = deslant(loc.size(), blobs);
 		loc = blobs.boundingRect();
 	//	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
-		groupVertical(blobs);
 		removeTerminator(blobs);
+		groupVertical(blobs);
 	//	defragment(car, blobs);
+		if (blobs.size() == 0) {
+			continue;
+		}
 		NumberRecognizer nr(blobs, weights);
 		//return extractDigit(blobs, angle);
 		std::string predLabel = nr.predict();
