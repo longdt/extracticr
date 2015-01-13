@@ -200,7 +200,10 @@ void CARLocator::getHandwrittenBlobs(Blobs& blobs) {
 		Blob* b = blobs[i];
 		Rect rect = b->boundingRect();
 		Point center(rect.x + rect.width / 2, rect.y + rect.height / 2);
-		if (!isInside(box, center) || rect.x <= startX || rect.width >= box.height || rect.x + rect.width > endX) {
+		if (!isInside(box, center) || rect.x <= startX || rect.width > box.width / 2 || rect.x + rect.width > endX) {
+			blobs.erase(i);
+			--i;
+		} else if (rect.y + rect.height + 2 >= box.y + box.height && rect.width / (float) rect.height > 2) { //TODO more condition
 			blobs.erase(i);
 			--i;
 		}

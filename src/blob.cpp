@@ -386,6 +386,49 @@ void removeSmallBlobs(Blobs& blobs) {
 	}
 }
 
+void removeTailNoise(Blobs& blobs, float strHeight, float middleLine) {
+	//remove small tail blobs
+	int lastBlobIdx = blobs.size() - 1;
+	for (; lastBlobIdx >= 0; --lastBlobIdx) {
+		cv::Rect box = blobs[lastBlobIdx]->boundingRect();
+		//(box.y <= middleLine && box.y + box.height > middleLine)
+		if (box.height + box.width >= strHeight * 0.7) {
+			break;
+		}
+	}
+	if (lastBlobIdx == -1) {
+		return;
+	}
+	cv::Rect lastBlobRect = blobs[lastBlobIdx]->boundingRect();
+	int x = lastBlobRect.x + lastBlobRect.width;
+	for (int i = blobs.size() - 1; i > lastBlobIdx; --i) {
+		cv::Rect box = blobs[i]->boundingRect();
+		if (box.x - x > strHeight / 2) {
+			blobs.erase(i);
+		}
+	}
+	if (lastBlobRect.width / (float) lastBlobRect.height > 1) {
+		return;
+	}
+	int second = lastBlobIdx - 1;
+	for (; second >= 0; --second) {
+		cv::Rect box = blobs[second]->boundingRect();
+		//(box.y <= middleLine && box.y + box.height > middleLine)
+		if (box.height + box.width >= strHeight * 0.7) {
+			break;
+		}
+	}
+	if (second == -1) {
+		return;
+	}
+	cv::Rect secRect = blobs[second]->boundingRect();
+	if (lastBlobRect.x - (secRect.x + secRect.width) > strHeight * 1.5) {
+		for (int i = blobs.size() - 1; i > second; --i) {
+			blobs.erase(i);
+		}
+	}
+}
+
 void cleanNoises(Blobs& blobs) {
 	Blobs temp(blobs);
 	std::vector<bool> del(temp.size(), false);
@@ -436,6 +479,7 @@ void cleanNoises(Blobs& blobs) {
 		}
 	}
 	blobs.sort(sortByVertical);
+	removeTailNoise(blobs, strHeight, middleLine);
 }
 
 void groupVertical(Blobs& blobs) {
