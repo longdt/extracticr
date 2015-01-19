@@ -91,3 +91,12 @@ void loadChequeLabel(string file, unordered_map<string, string>& dst) {
 		}
 	}
 }
+
+string removeDelimiter(string number) {
+	for (auto it = number.begin(); it != number.end(); ++it) {
+		if (*it == ',') {
+			number.erase(it);
+		}
+	}
+	return number;
+}
