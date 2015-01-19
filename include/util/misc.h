@@ -12,6 +12,7 @@ void matToVect(const cv::Mat& input, vec_t &dst);
 
 string parse_label(string filename);
 void loadChequeLabel(string filename, unordered_map<string, string>& dst);
+string removeDelimiter(string number);
 cv::Mat projectTop(const cv::Mat& src);
 cv::Mat projectBottom(const cv::Mat& src);
 void toFile(GeoContext& gc, std::string file);
