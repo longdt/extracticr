@@ -392,7 +392,7 @@ void removeTailNoise(Blobs& blobs, float strHeight, float middleLine) {
 	for (; lastBlobIdx >= 0; --lastBlobIdx) {
 		cv::Rect box = blobs[lastBlobIdx]->boundingRect();
 		//(box.y <= middleLine && box.y + box.height > middleLine)
-		if (box.height + box.width >= strHeight * 0.7) {
+		if (box.height + box.width >= strHeight * 0.7 && box.height > strHeight * 0.3) {
 			break;
 		}
 	}
@@ -414,7 +414,7 @@ void removeTailNoise(Blobs& blobs, float strHeight, float middleLine) {
 	for (; second >= 0; --second) {
 		cv::Rect box = blobs[second]->boundingRect();
 		//(box.y <= middleLine && box.y + box.height > middleLine)
-		if (box.height + box.width >= strHeight * 0.7) {
+		if (box.height + box.width >= strHeight * 0.7 && box.height > strHeight * 0.3) {
 			break;
 		}
 	}
