@@ -157,17 +157,23 @@ void ICREngine::trainWeightV2() {
 	srand(time(NULL));
 	unsigned long seed = time(NULL);
 	std::default_random_engine generator(seed);
-	float maxRange = 100;
+	float maxRange = 1000;
 	std::uniform_int_distribution<int> distribution(0, (int)maxRange * 2);
 	int wSize = 5;
-	std::vector<float> weights(wSize, 0);
-	for (int i = 0; i < wSize; ++i) {
-		weights[i] = distribution(generator) / maxRange;
-	};
+//	std::vector<float> weights(wSize, 0);
+//	for (int i = 0; i < wSize; ++i) {
+//		weights[i] = distribution(generator) / maxRange;
+//	};
+	std::vector<float> weights{0.958, 0.306, 1.765, 0.506, 1.008,};
 	std::vector<float> bestWeights = weights;
 	float bestCorrect = trainWeight(bestWeights);
+	std::cout << "Best Correct: " << bestCorrect << " with weights: ";
+	for (float w : bestWeights) {
+		std::cout << w << ", ";
+	}
+	std::cout << std::endl;
 	int correct = bestCorrect;
-	int patience = 500;
+	int patience = 1000;
 	float temp = 200;
 	float decrease = 0.99;
 	for (int i = 0; i < patience ; ++i) {
@@ -204,7 +210,7 @@ void ICREngine::trainWeightV2() {
 
 int ICREngine::trainWeight(std::vector<float>& weights) {
 	unordered_map<std::string, std::string> labels;
-	loadChequeLabel("train/labels.txt", labels);
+	loadChequeLabel("test-labels.txt", labels);
 	int correct = 0;
 	for (auto it = labels.begin(), end = labels.end(); it != end; ++it) {
 		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/" + it->first, 0);
@@ -228,7 +234,10 @@ int ICREngine::trainWeight(std::vector<float>& weights) {
 		NumberRecognizer nr(blobs, weights);
 		//return extractDigit(blobs, angle);
 		std::string predLabel = nr.predict();
-		if (predLabel.compare(it->second) == 0) {
+		std::string target = it->second;
+		predLabel = removeDelimiter(predLabel);
+		target = removeDelimiter(target);
+		if (predLabel.compare(target) == 0) {
 			++correct;
 		}
 	}

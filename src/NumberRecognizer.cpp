@@ -23,7 +23,7 @@ extern digit_recognizer recognizer;
 namespace icr {
 using namespace cv;
 label_t getBIGLabel(label_t prev, label_t cur);
-std::vector<float> DEFAULT_WEIGHT{0.87, 0.94, 1.99, 0.68, 0.82};
+std::vector<float> DEFAULT_WEIGHT{0.958, 0.306, 1.765, 0.506, 1.008};
 NumberRecognizer::NumberRecognizer(Blobs &blobs) : NumberRecognizer(blobs, DEFAULT_WEIGHT){
 }
 
@@ -31,12 +31,12 @@ NumberRecognizer::NumberRecognizer(Blobs &blobs, std::vector<float>& weights) : 
 	estHeightVertCenter(blobs, strHeight, middleLine);
 	genOverSegm(blobs);
 	//TODO debug
-//	cv::Mat car = drawBlobs(blobs);
-//	line(car, Point(0, middleLine), Point(car.cols -1, middleLine), Scalar(255, 0, 0));
-//	cv::imshow("hwimg", car);
-//	Mat img = drawBlobs(segms);
-//	namedWindow("segms", WINDOW_NORMAL);
-//	imshow("segms", img);
+	cv::Mat car = drawBlobs(blobs);
+	line(car, Point(0, middleLine), Point(car.cols -1, middleLine), Scalar(255, 0, 0));
+	cv::imshow("hwimg", car);
+	Mat img = drawBlobs(segms);
+	namedWindow("segms", WINDOW_NORMAL);
+	imshow("segms", img);
 }
 
 
@@ -472,7 +472,7 @@ std::string NumberRecognizer::predict() {
 			return bestP.string();
 		}
 		//expand node
-		int end = endNode + 4;
+		int end = endNode + 5;
 		if (end > segms.size()) {
 			end = segms.size();
 		}
