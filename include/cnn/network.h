@@ -38,6 +38,7 @@
 #include "optimizer.h"
 #include "fully_connected_layer.h"
 #include "layer.h"
+#include <istream>
 
 namespace tiny_cnn {
 
@@ -108,6 +109,17 @@ public:
 
     template<typename T>
     void add(layer_base<T> *layer) { layers_.add(layer); }
+
+    layers<Self>& getLayers() { return layers_; };
+
+    template <typename Char, typename CharTraits>
+    void load(std::basic_istream<Char, CharTraits>& os) {
+        auto current = layers_.head();
+        while (current != 0) {
+        	current->load(os);
+        	current = current->next();
+        }
+    }
 
     // input data dimension of whole networks
     int in_dim() const { return layers_.head()->in_size(); }

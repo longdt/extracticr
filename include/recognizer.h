@@ -18,8 +18,9 @@ private :
 	fully_connected_layer<CNN, tanh_activation> F6;
 	void test();
 public:
-	digit_recognizer(bool load_weight = true);
+	digit_recognizer();
 	~digit_recognizer();
+	void load(std::string mpath);
 	void predict(const vec_t& in, vec_t& out);
 	class result {
 	private:

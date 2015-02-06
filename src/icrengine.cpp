@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "util/misc.h"
 using boost::filesystem::directory_iterator;
 using boost::filesystem::path;
 std::vector<DigitWidthStatistic> digitStatistics;
@@ -18,8 +19,9 @@ int main()
 	if (!exists(p) || !is_directory(p)) {
 		return 0;
 	}
+	icr::ICREngine::loadModels("models");
 	icr::ICREngine engine;
-	int skip = 52 - 1; //74 110 313 330 398 42 218
+	int skip = 1 - 1; //74 110 313 330 398 42 218
 	int counter = 0;
 	int end = 1000;
 	for (directory_iterator iter(p), iterend; iter != iterend; ++iter) {
@@ -30,7 +32,7 @@ int main()
 			break;
 		}
 		cv::Mat cheque = cv::imread(iter->path().string(), 0);
-//		cv::Mat cheque = cv::imread("/home/thienlong/cheque/test.jpeg", 0);
+//		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/chq_00252_00.jpeg", 0);
 		if (cheque.empty())
 			return -1;
 		chqName = iter->path().filename().string();
@@ -39,9 +41,10 @@ int main()
 		chqName = chqName.substr(0, pos);
 		std::cout << counter << "\t" << iter->path().filename().string() << "\t";
 		std::cout.flush();
-
-		std::cout << engine.recognite(cheque) << std::endl;
-		cv::waitKey(0);
+		std::string amountStr = removeDelimiter(engine.recognite(cheque));
+		long double amount = std::stold(amountStr);
+		std::cout << amount << std::endl;
+		cv::waitKey(100);
 //		cv::destroyAllWindows();
 	}
     return 0;

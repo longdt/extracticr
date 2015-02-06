@@ -39,7 +39,19 @@ NumberRecognizer::NumberRecognizer(Blobs &blobs, std::vector<float>& weights) : 
 	imshow("segms", img);
 }
 
-
+NumberModel NumberRecognizer::nm;
+GeoContextModel NumberRecognizer::gcm;
+void NumberRecognizer::loadModels(std::string& mpath) {
+	gcm.loadModel(mpath);
+	std::ifstream cwfs(mpath + "/cw");
+	if (cwfs.is_open()) {
+		for (float& w : DEFAULT_WEIGHT) {
+			cwfs >> w;
+		}
+		cwfs.close();
+	}
+	recognizer.load(mpath + "/LeNet-weights");
+}
 
 bool NumberRecognizer::isTouching(Blob& blob) {
 	Rect r = blob.boundingRect();
@@ -427,8 +439,7 @@ std::pair<label_t, float> NumberRecognizer::predictNode(std::vector<label_t>& la
 	return labelScore;
 }
 
-NumberModel NumberRecognizer::nm;
-GeoContextModel NumberRecognizer::gcm;
+
 void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, int node) {
 	if (paths.empty()) {
 		return;
