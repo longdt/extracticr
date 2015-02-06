@@ -56,7 +56,7 @@ static const bool connection[] = {
 #undef O
 #undef X
 
-digit_recognizer::digit_recognizer(bool load_weight) : C1(32, 32, 5, 1, 6), S2(28, 28, 6, 2),
+digit_recognizer::digit_recognizer() : C1(32, 32, 5, 1, 6), S2(28, 28, 6, 2),
 		C3(14, 14, 5, 6, 16, connection_table(connection, 6, 16)), 
 		S4(10, 10, 16, 2), C5(5, 5, 5, 16, 120), F6(120, 12) {
 	assert(C1.param_size() == 156 && C1.connection_size() == 122304);
@@ -71,26 +71,20 @@ digit_recognizer::digit_recognizer(bool load_weight) : C1(32, 32, 5, 1, 6), S2(2
 	nn.add(&S4);
 	nn.add(&C5);
 	nn.add(&F6);
-
-	std::cout << "load models..." << std::endl;
-	if (load_weight) {
-		std::ifstream ifs("models/LeNet-weights");
-		if (ifs.is_open()) {
-			ifs >> C1;
-			ifs >> S2;
-			ifs >> C3;
-			ifs >> S4;
-			ifs >> C5;
-			ifs >> F6;
-			ifs.close();
-			std::cout << "loaded weights" << std::endl;
-		}
-	}
 }
 
 digit_recognizer::~digit_recognizer() {
 }
 
+void digit_recognizer::load(std::string mpath) {
+	std::cout << "load models..." << std::endl;
+	std::ifstream ifs(mpath);
+	if (ifs.is_open()) {
+		nn.load(ifs);
+		ifs.close();
+		std::cout << "loaded weights" << std::endl;
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // learning convolutional neural networks (LeNet-5 like architecture)

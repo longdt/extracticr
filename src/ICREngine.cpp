@@ -106,6 +106,10 @@ ICREngine::ICREngine() {
 ICREngine::~ICREngine() {
 }
 
+void ICREngine::loadModels(std::string mpath) {
+	NumberRecognizer::loadModels(mpath);
+}
+
 std::string ICREngine::recognite(cv::Mat& cheque) {
 	CARLocator locator(cheque);
 	Blobs blobs;

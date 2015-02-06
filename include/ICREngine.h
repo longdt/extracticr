@@ -21,6 +21,7 @@ private:
 	int trainWeight(std::vector<float>& weights);
 public:
 	ICREngine();
+	static void loadModels(std::string mpath);
 	std::string recognite(cv::Mat& cheque);
 	void trainWeight();
 	void trainWeightV2();

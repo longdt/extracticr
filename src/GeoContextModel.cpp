@@ -18,45 +18,55 @@ GeoContextModel::GeoContextModel() {
 	auto F2 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(20, 4);
 	uigModel.add(F1);
 	uigModel.add(F2);
-	std::ifstream uigfs("models/uig");
-	if (uigfs.is_open()) {
-		uigfs >> *F1 >> *F2;
-		uigfs.close();
-	}
+
 	//load ucgModel
 	F1 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(24, 100);
 	F2 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(100, 8);
 	ucgModel.add(F1);
 	ucgModel.add(F2);
-	std::ifstream ucgfs("models/ucg");
-	if (ucgfs.is_open()) {
-		ucgfs >> *F1 >> *F2;
-		ucgfs.close();
-	}
+
 	//load bcgModel
 	F1 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(72, 120);
 	F2 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(120, 64);
 	bcgModel.add(F1);
 	bcgModel.add(F2);
-	std::ifstream bcgfs("models/bcg");
-	if (bcgfs.is_open()) {
-		bcgfs >> *F1 >> *F2;
-		bcgfs.close();
-	}
+
 	//load bigModel
 	F1 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(13, 80);
 	F2 = new fully_connected_layer<network<mse, gradient_descent>, sigmoid_activation>(80, 6);
 	bigModel.add(F1);
 	bigModel.add(F2);
-	std::ifstream bigfs("models/big");
-	if (bigfs.is_open()) {
-		bigfs >> *F1 >> *F2;
-		bigfs.close();
-	}
+
 }
 
 GeoContextModel::~GeoContextModel() {
 	// TODO Auto-generated destructor stub
+}
+
+void GeoContextModel::loadModel(std::string& mpath) {
+	std::ifstream uigfs(mpath + "/uig");
+	if (uigfs.is_open()) {
+		uigModel.load(uigfs);
+		uigfs.close();
+	}
+
+	std::ifstream ucgfs(mpath + "/ucg");
+	if (ucgfs.is_open()) {
+		ucgModel.load(ucgfs);
+		ucgfs.close();
+	}
+
+	std::ifstream bcgfs(mpath + "/bcg");
+	if (bcgfs.is_open()) {
+		bcgModel.load(bcgfs);
+		bcgfs.close();
+	}
+
+	std::ifstream bigfs(mpath + "/big");
+	if (bigfs.is_open()) {
+		bigModel.load(bigfs);
+		bigfs.close();
+	}
 }
 
 void GeoContextModel::predictUnary(GeoContext& context, vec_t& ucg, vec_t& uig) {

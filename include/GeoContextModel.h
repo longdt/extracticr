@@ -26,6 +26,7 @@ private:
 public:
 	static std::vector<label_t> CLASS_MAP;
 	GeoContextModel();
+	void loadModel(std::string& mpath);
 	void predictUnary(GeoContext& context, vec_t& ucg, vec_t& uig);
 	void predictBinary(GeoContext& context, vec_t& bcg, vec_t& big);
 	virtual ~GeoContextModel();

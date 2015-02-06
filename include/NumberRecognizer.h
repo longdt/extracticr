@@ -48,6 +48,7 @@ private:
 public:
 	NumberRecognizer(Blobs &blobs, std::vector<float>& weights);
 	NumberRecognizer(Blobs &blobs);
+	static void loadModels(std::string& mpath);
 	std::string predict();
 	virtual ~NumberRecognizer();
 	void genTrainData(std::vector<Segment>& segmsCnf, int dataType, std::vector<vec_t>& inputs, std::vector<label_t>& labels);
