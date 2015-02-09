@@ -59,23 +59,26 @@ int detectTerminator(Blobs& blobs) {
 		return -1;
 	}
 	int firstHeighest = 0;
-	int index = 0;
+	int idx1 = 0;
 	for (size_t i = 0; i < blobs.size(); ++i) {
 		cv::Rect rect = blobs[i]->boundingRect();
 		if (firstHeighest < rect.height) {
 			firstHeighest = rect.height;
-			index = i;
+			idx1 = i;
 		}
 	}
 	int secondHeighest = 0;
+	int idx2 = 0;
 	for (size_t i = 0; i < blobs.size(); ++i) {
 		cv::Rect rect = blobs[i]->boundingRect();
-		if (secondHeighest < rect.height && i != index) {
+		if (secondHeighest < rect.height && i != idx1) {
 			secondHeighest = rect.height;
+			idx2 = i;
 		}
 	}
-	if (firstHeighest / (float) secondHeighest >= 1.8) {
-		return index;
+	float rate = firstHeighest / (float) secondHeighest;
+	if (rate >= 1.8 || (idx1 > idx2 && rate >= 1.5)) {
+		return idx1;
 	}
 	return -1;
 }
