@@ -346,6 +346,7 @@ public:
 	}
 };
 
+//@Deprecated
 Path bestPath(std::vector<Path>& paths) {
 	auto bestIt = paths.begin();
 	float bestCost = -999999;
@@ -355,6 +356,31 @@ Path bestPath(std::vector<Path>& paths) {
 			bestCost = score;
 			bestIt = it;
 		}
+	}
+	return *bestIt;
+}
+
+Path bestPath(std::vector<Path>& paths, Path* second) {
+	auto bestIt = paths.begin();
+	float bestCost = -999999;
+	for (auto it = paths.begin(), end = paths.end(); it != end; ++it) {
+		float score = it->getScore();
+		if (bestCost < score) {
+			bestCost = score;
+			bestIt = it;
+		}
+	}
+	if (second != NULL) {
+		bestCost = -999999;
+		auto secIt = paths.begin();
+		for (auto it = paths.begin(), end = paths.end(); it != end; ++it) {
+			float score = it->getScore();
+			if (bestCost < score && it != bestIt) {
+				bestCost = score;
+				secIt = it;
+			}
+		}
+		*second = *secIt;
 	}
 	return *bestIt;
 }
@@ -424,17 +450,14 @@ std::pair<label_t, float> NumberRecognizer::predictNode(std::vector<label_t>& la
 	labelScore.second = rs.confidence();
 	//find second choice
 	if (secChoice != NULL) {
-		float bestScore = -9999;
-		int bestLabel = 0, secLabel = 0;
+		secChoice->second = -9999;
+		secChoice->first = -1;
 		for (int i = 0; i < rs.out.size(); ++i) {
-			if (rs.out[i] > bestScore) {
-				bestScore = rs.out[i];
-				secLabel = bestLabel;
-				bestLabel = i;
+			if (rs.out[i] > secChoice->second && i != labelScore.first) {
+				secChoice->second = rs.out[i];
+				secChoice->first = i;
 			}
 		}
-		secChoice->first = secLabel;
-		secChoice->second = rs.out[secLabel];
 	}
 	return labelScore;
 }
@@ -488,11 +511,21 @@ std::string NumberRecognizer::predict() {
 			end = segms.size();
 		}
 		//TODO Debug
-//		bestP = bestPath(paths);
-//		if (bestP.string().compare("2,720") == 0) {
-//			int stub = 0;
+//		bestP = bestPath(paths, &secP);
+//		std::cout << "DEBUG: ";
+//		auto printPath = [](Path& p) {
+//			cout << p.string() << "[0";
+//			for (int i = 1; i < p.path.size(); ++i) {
+//				cout << "," << p.path[i];
+//			}
+//			cout << "] ";
+//		};
+//		for (Path p : paths) {
+//			printPath(p);
 //		}
-//		std::cout << "DEBUG: " << bestP.string() << std::endl;
+//		printPath(bestP);
+//		printPath(secP);
+//		cout << std::endl;
 		for (int i = endNode + 1; i <= end; ++i) {
 			if (isCandidatePattern(endNode, i)) {
 				expandPath(beam, paths, i);
