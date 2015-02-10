@@ -26,15 +26,15 @@ string parse_label(string filename) {
 }
 
 cv::Mat projectTop(const cv::Mat& src) {
-	cv::Mat dst(src.rows, src.cols, CV_8UC1, cv::Scalar(0));
+	cv::Mat dst(src.rows + 2, src.cols, CV_8UC1, cv::Scalar(0));
 	for (int c = 0; c < src.cols; ++c) {
 		bool setPixel = false;
 		for (int r = 0; r < src.rows; ++r) {
 			if (setPixel) {
-				dst.at<uchar>(r, c) = 255;
+				dst.at<uchar>(r + 1, c) = 255;
 			} else if (src.at<uchar>(r, c) > 0) {
 				setPixel = true;
-				dst.at<uchar>(r, c) = 255;
+				dst.at<uchar>(r + 1, c) = 255;
 			}
 		}
 	}

@@ -130,7 +130,7 @@ void genUpperCuts(Mat& img, std::vector<int>& upperCuts) {
 	cv::approxPolyDP(cv::Mat(contours[0]), approx, cv::arcLength(cv::Mat(contours[0]), true)*0.02, true);
 	rollPath(project, approx);
 	//debug
-//	Mat drawing(project.rows, project.cols, CV_8UC3);
+//	Mat drawing = Mat::zeros(project.rows, project.cols, CV_8UC3);
 //	for (size_t i = 0; i < approx.size() - 1; ++i) {
 //		if (i == 0) {
 //			line(drawing, approx[i], approx[i + 1], Scalar( 255,0, 0), 1);
