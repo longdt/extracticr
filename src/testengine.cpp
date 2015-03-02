@@ -11,7 +11,7 @@
 using boost::filesystem::directory_iterator;
 using boost::filesystem::path;
 std::string chqName;
-int main()
+int icrmain()
 {
 	path p("/home/thienlong/cheque/500 Cheques/ValidChq");
 	if (!exists(p) || !is_directory(p)) {
@@ -19,7 +19,7 @@ int main()
 	}
 	icr::ICREngine::loadModels("models");
 	icr::ICREngine engine;
-	int skip = 10 - 1; //*73 *169 313 330 398 *42 218
+	int skip = 1 - 1; //*73 *169 313 330 398 *42 *78
 	int counter = 0;
 	int end = 1000;
 	for (directory_iterator iter(p), iterend; iter != iterend; ++iter) {
@@ -30,7 +30,7 @@ int main()
 			break;
 		}
 		cv::Mat cheque = cv::imread(iter->path().string(), 0);
-//		cv::Mat cheque = cv::imread("/home/thienlong/cheque/test.jpeg", 0);
+//		cv::Mat cheque = cv::imread("/home/thienlong/cheque/500 Cheques/ValidChq/chq_00461_00.jpeg", 0);
 		if (cheque.empty())
 			return -1;
 		chqName = iter->path().filename().string();
@@ -42,7 +42,7 @@ int main()
 		std::string amountStr = removeDelimiter(engine.recognite(cheque));
 //		long double amount = std::stold(amountStr);
 		std::cout << amountStr << std::endl;
-		cv::waitKey(0);
+//		cv::waitKey(100);
 //		cv::destroyAllWindows();
 	}
     return 0;

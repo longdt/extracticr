@@ -87,16 +87,16 @@ inline bool isInside(const Rect& box, Point p) {
 	return (box.x <= p.x && box.y <= p.y) && (box.x + box.width) > p.x && (box.y + box.height) > p.y;
 }
 
-cv::Rect CARLocator::getRMLocation() {
-	Mat bin;
-	doThreshold(cheqImg, bin, BhThresholdMethod::OTSU);
-	bin = bin / 255;
-	Blobs blobs;
-	findBlobs(bin, blobs);
-	return getRMLocation(blobs);
-}
+//cv::Rect CARLocator::getRMLocation() {
+//	Mat bin;
+//	doThreshold(cheqImg, bin, BhThresholdMethod::OTSU);
+//	bin = bin / 255;
+//	Blobs blobs;
+//	findBlobs(bin, blobs);
+//	return getRMLocation(blobs);
+//}
 
-cv::Rect CARLocator::getRMLocation(Blobs& blobs) {
+cv::Rect CARLocator::getRMLocation(Blobs& blobs, cv::Rect& carLoc) {
 	Rect box = getMPRLocation();
 	int blobWidthThres = box.height / 2;
 #define PADDING_HEIGHT 0.2
@@ -115,6 +115,20 @@ cv::Rect CARLocator::getRMLocation(Blobs& blobs) {
 		}
 	}
 	Rect rs = blobs.boundingRect();
+	if (rs.height >= rs.width) {
+		//select blob within box
+		for (size_t i = 0; i < blobs.size(); ++i) {
+			Blob* b = blobs[i];
+			Rect rect = b->boundingRect();
+			if (rect.y <= carLoc.y || rect.y + rect.height >= carLoc.y + carLoc.height) {
+				blobs.erase(i);
+				--i;
+			}
+		}
+		rs = blobs.boundingRect();
+	} else if (rs.height + rs.y > carLoc.y + carLoc.height) {
+		carLoc.height += 5;
+	}
 	return rs;
 }
 
@@ -188,11 +202,17 @@ void CARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	}
 	blobs.clone(rmBlobs);
 	Rect box = getCARLocation();
-	Rect rm = getRMLocation(rmBlobs);
+	Rect rm = getRMLocation(rmBlobs, box);
 	if (rm.height == 0 || rm.width / rm.height > 5) {		//can't detect RM symbol
 		blobs.clear();
 		return;
 	}
+//	Mat cdst;
+//	cvtColor(this->cheqImg, cdst, CV_GRAY2BGR);
+//	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
+//	cv::rectangle(cdst, box, CV_RGB(0,255,0));
+//	imshow("cdst", cdst);
+
 	int startX = rm.x + rm.width;
 	int endX = box.x + box.width;
 	//get only blob inside box
