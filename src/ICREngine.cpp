@@ -77,7 +77,7 @@ int detectTerminator(Blobs& blobs) {
 		}
 	}
 	float rate = firstHeighest / (float) secondHeighest;
-	if (rate >= 1.8 || (idx1 > idx2 && rate >= 1.5)) {
+	if (rate >= 1.8 || (idx1 > idx2 + 2 && rate >= 1.5)) {
 		return idx1;
 	}
 	return -1;
