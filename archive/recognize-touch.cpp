@@ -26,45 +26,7 @@ extern vector<DigitWidthStatistic> digitStatistics;
 std::string recognizeND(Mat& src, average<int>& estDigitWidth, double& srcConf);
 bool isSingleDigit(digit_recognizer::result& predRs, cv::Rect& bound, average<int>& estDigitWidth);
 
-cv::Mat makeDigitMat(const cv::Mat& crop) {
-	int width = 0;
-	int height = 0;
-	int paddingX = 0;
-	int paddingY = 0;
-	if (crop.rows > crop.cols) {
-		//scale to height
-		height = 20;
-		width = (height * crop.cols) / crop.rows;
-	}
-	else {
-		width = 20;
-		//scale to width
-		height = (width * crop.rows) / crop.cols;
-	}
-	cv::Size size(width, height);
-	cv::Mat resize;
-	cv::resize(crop, resize, size);
-	cv::Mat padded(28, 28, CV_8UC1);
-	padded.setTo(cv::Scalar::all(0));
-	paddingX = (28 - resize.cols) / 2;
-	paddingY = (28 - resize.rows) / 2;
-	resize.copyTo(padded(cv::Rect(paddingX, paddingY, resize.cols, resize.rows)));
-	//		cv::copyMakeBorder(resize, pad, 4, 4, 4, 4, cv::BORDER_CONSTANT, cv::Scalar(0));
-	return padded;
-}
 
-cv::Mat makeDigitMat(Blob& blob, float slantAngle) {
-	cv::Mat crop = cropBlob(blob);
-	float angle = deslant(crop, NULL, objectWidth);
-	if (slantAngle * angle > 0) {
-		angle = abs(angle + slantAngle) > 48 ? 0 : angle;
-	}
-	if (angle != 0) {
-		crop = slant(crop, angle);
-	}
-	cropMat(crop, crop);
-	return makeDigitMat(crop);
-}
 
 void drawCut(Mat& src, vector<Point> &cut) {
 	for (auto p : cut) {
