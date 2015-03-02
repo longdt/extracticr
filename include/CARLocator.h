@@ -15,7 +15,7 @@ namespace icr {
 class CARLocator {
 private:
 	cv::Mat cheqImg;
-	cv::Rect getRMLocation(Blobs& blobs);
+	cv::Rect getRMLocation(Blobs& blobs, cv::Rect& carLoc);
 public:
 	/*
 	 * cheqImg is gray level image
