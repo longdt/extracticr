@@ -254,6 +254,11 @@ cv::Rect boundingRect(cv::Rect r1, cv::Rect r2) {
 }
 
 void estHeightVertCenter(Blobs& blobs, float& strHeight, float& middleLine) {
+	if (blobs.size() == 1) {
+		strHeight = blobs[0]->boundingRect().height;
+		middleLine = strHeight / 2;
+		return;
+	}
 	float heightScore = 0;
 	int sumHeightW = 0;
 	float middleLineScore = 0;
