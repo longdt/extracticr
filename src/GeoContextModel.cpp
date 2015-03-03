@@ -286,7 +286,7 @@ float NumberModel::getFinalScore(std::vector<label_t> labels, label_t l) {
 	auto iter = std::find(labels.begin(), labels.end(), 10);
 	auto end = labels.end();
 	if (iter != end) {
-		return iter + 2 != end ? score - 1 : score + 0;
+		return std::distance(iter, end) != 2 ? score - 1 : score + 0;
 	}
 	//delimiter
 	auto r = std::find(labels.rbegin(), labels.rend(), 11);

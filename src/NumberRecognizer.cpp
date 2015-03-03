@@ -23,7 +23,7 @@ extern digit_recognizer recognizer;
 namespace icr {
 using namespace cv;
 label_t getBIGLabel(label_t prev, label_t cur);
-std::vector<float> DEFAULT_WEIGHT{0.958, 0.306, 1.765, 0.506, 1.008};
+std::vector<float> DEFAULT_WEIGHT{0.958f, 0.306f, 1.765f, 0.506f, 1.008f};
 NumberRecognizer::NumberRecognizer(Blobs &blobs) : NumberRecognizer(blobs, DEFAULT_WEIGHT){
 }
 
@@ -331,10 +331,10 @@ public:
 		paths.insert(it, p);
 		//remove worst p if exceeded
 		if (counter == with) {
-			--it;
-			auto worstIt = it;
+			auto worstIt = paths.end();
 			float worstScore = 999999;
-			for (; counter >= 0; --it, --counter) {
+			for (; counter >= 0; --counter) {
+				--it;
 				float score = it->getScore();
 				if (worstScore > score) {
 					worstScore = score;

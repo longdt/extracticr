@@ -19,6 +19,7 @@
 #include "util/misc.h"
 #include <cstdlib>
 #include <iosfwd>
+#include <random>
 using std::unordered_map;
 digit_recognizer recognizer;
 
@@ -171,7 +172,7 @@ void ICREngine::trainWeightV2() {
 //	for (int i = 0; i < wSize; ++i) {
 //		weights[i] = distribution(generator) / maxRange;
 //	};
-	std::vector<float> weights{0.958, 0.306, 1.765, 0.506, 1.008,};
+	std::vector<float> weights{0.958f, 0.306f, 1.765f, 0.506f, 1.008f};
 	std::vector<float> bestWeights = weights;
 	float bestCorrect = trainWeight(bestWeights);
 	std::cout << "Best Correct: " << bestCorrect << " with weights: ";
