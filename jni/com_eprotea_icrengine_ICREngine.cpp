@@ -26,7 +26,12 @@ JNIEXPORT void JNICALL Java_com_eprotea_icrengine_ICREngine_predictCA
 	Mat img = imdecode(Mat(1, length, CV_8UC1, imgData), 0);
 	env->ReleaseByteArrayElements(chqImg, imgData, 0);
 	if (img.empty()) {
+		jclass Exception = env->FindClass("com/eprotea/icrengine/ICRException");
+		env->ThrowNew(Exception,"Invalid image data format");
 		return;
+	} else if (img.cols < 1300 || img.rows < 650) {
+		jclass Exception = env->FindClass("com/eprotea/icrengine/ICRException");
+		env->ThrowNew(Exception,"Image is too small. Expected Size is around 700x1410");
 	}
 	string amount = engine.recognite(img);
 	amount = removeDelimiter(amount);
