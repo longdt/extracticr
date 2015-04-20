@@ -99,6 +99,9 @@ inline bool isInside(const Rect& box, Point p) {
 cv::Rect CARLocator::getRMLocation(Blobs& blobs, cv::Rect& carLoc) {
 	Rect box = getMPRLocation();
 	int blobWidthThres = box.height / 2;
+	if (blobWidthThres < 70) { //blobWidthThres must at least 70
+		blobWidthThres = 70;
+	}
 #define PADDING_HEIGHT 0.2
 	box.y += box.height * PADDING_HEIGHT;
 	box.height *= 1 - PADDING_HEIGHT * 2;
@@ -203,15 +206,15 @@ void CARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	blobs.clone(rmBlobs);
 	Rect box = getCARLocation();
 	Rect rm = getRMLocation(rmBlobs, box);
+	Mat cdst;
+	cvtColor(this->cheqImg, cdst, CV_GRAY2BGR);
+	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
+	cv::rectangle(cdst, box, CV_RGB(0,255,0));
+	imshow("cdst", cdst);
 	if (rm.height == 0 || rm.width / rm.height > 5) {		//can't detect RM symbol
 		blobs.clear();
 		return;
 	}
-//	Mat cdst;
-//	cvtColor(this->cheqImg, cdst, CV_GRAY2BGR);
-//	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
-//	cv::rectangle(cdst, box, CV_RGB(0,255,0));
-//	imshow("cdst", cdst);
 
 	int startX = rm.x + rm.width;
 	int endX = box.x + box.width;
