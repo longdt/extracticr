@@ -48,24 +48,32 @@ void GeoContextModel::loadModel(std::string& mpath) {
 	if (uigfs.is_open()) {
 		uigModel.load(uigfs);
 		uigfs.close();
+	} else {
+		throw std::invalid_argument("can't load 'uig' model");
 	}
 
 	std::ifstream ucgfs(mpath + "/ucg");
 	if (ucgfs.is_open()) {
 		ucgModel.load(ucgfs);
 		ucgfs.close();
+	} else {
+		throw std::invalid_argument("can't load 'ucg' model");
 	}
 
 	std::ifstream bcgfs(mpath + "/bcg");
 	if (bcgfs.is_open()) {
 		bcgModel.load(bcgfs);
 		bcgfs.close();
+	} else {
+		throw std::invalid_argument("can't load 'bcg' model");
 	}
 
 	std::ifstream bigfs(mpath + "/big");
 	if (bigfs.is_open()) {
 		bigModel.load(bigfs);
 		bigfs.close();
+	} else {
+		throw std::invalid_argument("can't load 'big' model");
 	}
 }
 

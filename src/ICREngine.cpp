@@ -114,7 +114,7 @@ void ICREngine::loadModels(std::string mpath) {
 	NumberRecognizer::loadModels(mpath);
 }
 
-std::string ICREngine::recognite(cv::Mat& cheque) {
+std::string ICREngine::recognite(cv::Mat& cheque, float* confidence) {
 	CARLocator locator(cheque);
 	Blobs blobs;
 	locator.getHandwrittenBlobs(blobs);
@@ -134,7 +134,7 @@ std::string ICREngine::recognite(cv::Mat& cheque) {
 	}
 	NumberRecognizer nr(blobs);
 	//return extractDigit(blobs, angle);
-	return nr.predict();
+	return nr.predict(confidence);
 }
 
 void ICREngine::trainWeight() {
