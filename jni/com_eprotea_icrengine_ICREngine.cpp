@@ -33,7 +33,8 @@ JNIEXPORT void JNICALL Java_com_eprotea_icrengine_ICREngine_predictCA
 		jclass Exception = env->FindClass("com/eprotea/icrengine/ICRException");
 		env->ThrowNew(Exception,"Image is too small. Expected Size is around 700x1410");
 	}
-	string amount = engine.recognite(img);
+	float conf = 0;
+	string amount = engine.recognite(img, &conf);
 	amount = removeDelimiter(amount);
 	if (amount.empty()) {
 		return;
@@ -41,6 +42,7 @@ JNIEXPORT void JNICALL Java_com_eprotea_icrengine_ICREngine_predictCA
 	jdouble* result = env->GetDoubleArrayElements(output, NULL);
 	istringstream iss(amount);
 	iss >> result[0];
+	result[1] = conf;
 	env->ReleaseDoubleArrayElements(output, result, 0);
 }
 
