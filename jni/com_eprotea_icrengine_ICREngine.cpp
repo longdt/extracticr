@@ -47,6 +47,11 @@ JNIEXPORT void JNICALL Java_com_eprotea_icrengine_ICREngine_predictCA
 JNIEXPORT void JNICALL Java_com_eprotea_icrengine_ICREngine_loadModels
   (JNIEnv *env, jclass classObj, jstring modelPath) {
 	const char* cmPath = env->GetStringUTFChars(modelPath, NULL);
-	icr::ICREngine::loadModels(cmPath);
+	try {
+		icr::ICREngine::loadModels(cmPath);
+	} catch (const exception& e) {
+		jclass Exception = env->FindClass("com/eprotea/icrengine/ICRException");
+		env->ThrowNew(Exception, e.what());
+	}
 	env->ReleaseStringUTFChars(modelPath, cmPath);
 }

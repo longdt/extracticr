@@ -22,7 +22,7 @@ private:
 public:
 	ICREngine();
 	static void loadModels(std::string mpath);
-	std::string recognite(cv::Mat& cheque);
+	std::string recognite(cv::Mat& cheque, float* confidence = NULL);
 	void trainWeight();
 	void trainWeightV2();
 	virtual ~ICREngine();

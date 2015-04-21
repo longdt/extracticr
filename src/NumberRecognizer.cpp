@@ -49,6 +49,8 @@ void NumberRecognizer::loadModels(std::string& mpath) {
 			cwfs >> w;
 		}
 		cwfs.close();
+	} else {
+		throw std::invalid_argument("can't load 'cw' model");
 	}
 	recognizer.load(mpath + "/LeNet-weights");
 }
@@ -248,8 +250,9 @@ class Path {
 	std::vector<int> path;
 	std::vector<label_t> labels;
 	float score;
+	float confidenceScore;
 public:
-	Path() : score(0) {
+	Path() : score(0), confidenceScore(0) {
 
 	}
 
@@ -261,14 +264,19 @@ public:
 		path.push_back(node);
 	}
 
-	void add(int node, label_t l, float score) {
+	void add(int node, label_t l, float score, float confScore) {
 		path.push_back(node);
 		this->score += score;
+		confidenceScore += confScore;
 		labels.push_back(l);
 	}
 
 	const std::vector<int>& get() const {
 		return path;
+	}
+
+	float confidence() const {
+		return confidenceScore / (path.size() - 1);
 	}
 
 	std::string string() {
@@ -482,16 +490,16 @@ void NumberRecognizer::expandPath(Beam& beam, const std::vector<Path>& paths, in
 			}
 			std::pair<label_t, float> rsSec;
 			std::pair<label_t, float> rs = predictNode(newP.labels, result, gc, lastNode, &rsSec);
-			newP.add(node, rs.first, rs.second);
+			newP.add(node, rs.first, rs.second, result.out[rs.first]);
 			beam.add(newP);
-			secP.add(node, rsSec.first, rsSec.second);
+			secP.add(node, rsSec.first, rsSec.second, result.out[rsSec.first]);
 			beam.add(secP);
 		}
 	} catch (cv::Exception& e) {
 	}
 }
 
-std::string NumberRecognizer::predict() {
+std::string NumberRecognizer::predict(float* confidence) {
 	//implement beam search
 	Beam beam(10);
 	Path start;
@@ -505,6 +513,9 @@ std::string NumberRecognizer::predict() {
 		if (endNode == segms.size()) {
 			bestP = bestPath(paths, &secP);
 //			cout << secP.string() << " ";
+			if (confidence != NULL) {
+				*confidence = bestP.confidence();
+			}
 			return bestP.string();
 		}
 		//expand node

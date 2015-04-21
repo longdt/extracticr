@@ -83,6 +83,8 @@ void digit_recognizer::load(std::string mpath) {
 		nn.load(ifs);
 		ifs.close();
 		std::cout << "loaded weights" << std::endl;
+	} else {
+		throw std::invalid_argument("can't load 'LeNet-weights' model");
 	}
 }
 
