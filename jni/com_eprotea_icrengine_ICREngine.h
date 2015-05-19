@@ -7,6 +7,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#undef com_eprotea_icrengine_ICREngine_CHEQUE_MY
+#define com_eprotea_icrengine_ICREngine_CHEQUE_MY 0L
+#undef com_eprotea_icrengine_ICREngine_CHEQUE_PH
+#define com_eprotea_icrengine_ICREngine_CHEQUE_PH 1L
 /*
  * Class:     com_eprotea_icrengine_ICREngine
  * Method:    loadModels
@@ -18,10 +22,10 @@ JNIEXPORT void JNICALL Java_com_eprotea_icrengine_ICREngine_loadModels
 /*
  * Class:     com_eprotea_icrengine_ICREngine
  * Method:    predictCA
- * Signature: ([B[D)V
+ * Signature: (I[B[D)V
  */
 JNIEXPORT void JNICALL Java_com_eprotea_icrengine_ICREngine_predictCA
-  (JNIEnv *, jobject, jbyteArray, jdoubleArray);
+  (JNIEnv *, jobject, jint, jbyteArray, jdoubleArray);
 
 #ifdef __cplusplus
 }
