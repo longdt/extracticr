@@ -208,11 +208,11 @@ void CARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	blobs.clone(rmBlobs);
 	Rect box = getCARLocation();
 	Rect rm = getRMLocation(rmBlobs, box);
-	Mat cdst;
-	cvtColor(this->cheqImg, cdst, CV_GRAY2BGR);
-	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
-	cv::rectangle(cdst, box, CV_RGB(0,255,0));
-	imshow("cdst", cdst);
+//	Mat cdst;
+//	cvtColor(this->cheqImg, cdst, CV_GRAY2BGR);
+//	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
+//	cv::rectangle(cdst, box, CV_RGB(0,255,0));
+//	imshow("cdst", cdst);
 	if (rm.height == 0 || rm.width / rm.height > 5) {		//can't detect RM symbol
 		blobs.clear();
 		return;
@@ -274,7 +274,6 @@ cv::Rect PhCARLocator::getCARLocation() {
 	Mat img = this->cheqImg(roi);
 	Mat edges;
 	Canny(img, edges, 80, 120);
-	imshow("edges", edges);
 	std::vector<cv::Vec4i> lines;
 	HoughLinesP(edges, lines, 1, CV_PI/ 2, 50, 50, 10 );
 	Rect mpr = getMPRLocation();
@@ -330,14 +329,12 @@ void PhCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	}
 	blobs.clone(rmBlobs);
 	Rect box = getCARLocation();
-	std::cout << "boundingBox: " << boundingBox << std::endl;
 	Rect rm = getRMLocation(rmBlobs, box);
-	Mat cdst;
-	cvtColor(this->cheqImg, cdst, CV_GRAY2BGR);
-	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
-	cv::rectangle(cdst, box, CV_RGB(0,255,0));
-	imshow("cdst", cdst);
-	waitKey(0);
+//	Mat cdst;
+//	cvtColor(this->cheqImg, cdst, CV_GRAY2BGR);
+//	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
+//	cv::rectangle(cdst, box, CV_RGB(0,255,0));
+//	imshow("cdst", cdst);
 	if (rm.height == 0 || rm.width / rm.height > 5) {		//can't detect RM symbol
 		blobs.clear();
 		return;
