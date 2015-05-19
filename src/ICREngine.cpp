@@ -104,7 +104,7 @@ int detectPeriod(Blobs& blobs) {
 	return -1;
 }
 
-ICREngine::ICREngine() {
+ICREngine::ICREngine(int type) : chequeType(type) {
 }
 
 ICREngine::~ICREngine() {
@@ -115,9 +115,10 @@ void ICREngine::loadModels(std::string mpath) {
 }
 
 std::string ICREngine::recognite(cv::Mat& cheque, float* confidence) {
-	CARLocator locator(cheque);
+	CARLocator* locator = chequeType == CHEQUE_PH ? new PhCARLocator(cheque) : new CARLocator(cheque);
 	Blobs blobs;
-	locator.getHandwrittenBlobs(blobs);
+	locator->getHandwrittenBlobs(blobs);
+	delete locator;
 	if (blobs.size() == 0) {
 		return "";
 	}
