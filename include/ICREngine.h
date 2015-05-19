@@ -15,12 +15,14 @@
 
 #include "digit-statistic.h"
 namespace icr {
-
+#define CHEQUE_MY 0
+#define CHEQUE_PH 1
 class ICREngine {
 private:
+	int chequeType;
 	int trainWeight(std::vector<float>& weights);
 public:
-	ICREngine();
+	ICREngine(int type = CHEQUE_MY);
 	static void loadModels(std::string mpath);
 	std::string recognite(cv::Mat& cheque, float* confidence = NULL);
 	void trainWeight();

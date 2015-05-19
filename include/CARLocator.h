@@ -13,19 +13,30 @@
 namespace icr {
 
 class CARLocator {
-private:
+protected:
 	cv::Mat cheqImg;
-	cv::Rect getRMLocation(Blobs& blobs, cv::Rect& carLoc);
+	virtual cv::Rect getRMLocation(Blobs& blobs, cv::Rect& carLoc);
 public:
 	/*
 	 * cheqImg is gray level image
 	 * */
 	CARLocator(cv::Mat& cheqImg);
-	cv::Rect getCARLocation();
-	cv::Rect getMPRLocation();
+	virtual cv::Rect getCARLocation();
+	virtual cv::Rect getMPRLocation();
 	cv::Rect getRMLocation();
-	void getHandwrittenBlobs(Blobs& blobs);
+	virtual void getHandwrittenBlobs(Blobs& blobs);
 	virtual ~CARLocator();
+};
+
+class PhCARLocator : public CARLocator {
+	using CARLocator::CARLocator;
+private:
+	bool boundingBox;
+public:
+	virtual cv::Rect getRMLocation(Blobs& blobs, cv::Rect& carLoc);
+	virtual cv::Rect getMPRLocation();
+	virtual cv::Rect getCARLocation();
+	virtual void getHandwrittenBlobs(Blobs& blobs);
 };
 
 } /* namespace icr */
