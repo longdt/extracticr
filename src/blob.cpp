@@ -313,6 +313,15 @@ cv::Mat drawBinaryBlobs(const Blobs& blobs) {
 	return output;
 }
 
+void drawBinaryBlobs(const Blobs& blobs, cv::Mat& output) {
+	output = cv::Scalar::all(0);
+	for (size_t i = 0; i < blobs.size(); i++) {
+		for (auto p : blobs[i]->points) {
+			output.at<uchar>(p) = 255;
+		}
+	}
+}
+
 class DisjointDigit {
 public:
 	bool operator() (Blob* blob1, Blob* blob2) {

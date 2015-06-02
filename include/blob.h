@@ -59,6 +59,7 @@ cv::Rect boundingRect(cv::Rect r1, cv::Rect r2);
 void drawBlobs(const Blobs& blobs, cv::Mat& output);
 cv::Mat drawBlobs(const Blobs& blobs);
 cv::Mat drawBinaryBlobs(const Blobs& blobs);
+void drawBinaryBlobs(const Blobs& blobs, cv::Mat& output);
 void estHeightVertCenter(Blobs& blobs, float& strHeight, float& middleLine);
 //@deprecase. Use defragment instead of
 void groupVertical(Blobs& blobs);

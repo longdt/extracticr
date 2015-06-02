@@ -20,7 +20,7 @@ public:
 	/*
 	 * cheqImg is gray level image
 	 * */
-	CARLocator(cv::Mat& cheqImg);
+	explicit CARLocator(cv::Mat& cheqImg);
 	virtual cv::Rect getCARLocation();
 	virtual cv::Rect getMPRLocation();
 	cv::Rect getRMLocation();
@@ -29,10 +29,11 @@ public:
 };
 
 class PhCARLocator : public CARLocator {
-	using CARLocator::CARLocator;
 private:
 	bool boundingBox;
+	cv::Mat mprImg;
 public:
+	explicit PhCARLocator(cv::Mat& cheqImg);
 	virtual cv::Rect getRMLocation(Blobs& blobs, cv::Rect& carLoc);
 	virtual cv::Rect getMPRLocation();
 	virtual cv::Rect getCARLocation();
