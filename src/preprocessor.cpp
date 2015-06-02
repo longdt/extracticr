@@ -249,6 +249,38 @@ void doThreshold(InputArray _src ,OutputArray _dst,const BhThresholdMethod &meth
 #endif
 }
 
+void removeNoise(cv::Mat& img) {
+	Mat bi;
+	cv::threshold(img, bi, 127, 1, THRESH_BINARY);
+	Blobs blobs;
+	findBlobs(bi, blobs);
+	int minp = img.cols * img.rows;
+	int maxp = 0;
+	float mina = img.cols;
+	float maxa = 0;
+	for (int i = 0; i < blobs.size(); ++i) {
+		auto blob = blobs[i];
+		minp = std::min(minp, (int) blob->points.size());
+		maxp = std::max(maxp, (int) blob->points.size());
+		auto rect = blob->boundingRect();
+		float aspect = rect.height / (float) rect.width;
+		mina = std::min(mina, aspect);
+		maxa = std::max(maxa, aspect);
+	}
+	for (int i = 0; i < blobs.size(); ++i) {
+		auto blob = blobs[i];
+		float tp = (blob->points.size() - minp) / (float) (maxp - minp);
+		auto rect = blob->boundingRect();
+		float aspect = rect.height / (float) rect.width;
+		float ta = (aspect - mina) / (float) (maxa - mina);
+		if (tp < 0.002 || ta < 0.002) {
+			blobs.erase(i);
+			--i;
+		}
+	}
+	drawBinaryBlobs(blobs, img);
+}
+
 cv::Mat cropBlob(Blob& blob, int pad) {
 	cv::Rect bound = blob.boundingRect();
 	cv::Mat rs = cv::Mat::zeros(bound.height + 2 * pad, bound.width + 2 * pad, CV_8UC1);

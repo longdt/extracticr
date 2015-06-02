@@ -16,8 +16,10 @@ namespace cv {
 //threshold
 enum class BhThresholdMethod{OTSU, NIBLACK, SAUVOLA, WOLFJOLION};
 void doThreshold(cv::InputArray src, cv::OutputArray dst, const BhThresholdMethod &method);
+void removeNoise(cv::Mat& binary);
 
 //dropfall
+//@deprecated
 void dropfallLeft(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);
 void dropfallExtLeft(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);
 void dropfallRight(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);
@@ -40,7 +42,7 @@ void projectHorizontal(cv::Mat& input, std::vector<int>& output);
 cv::Mat cropDigitString(cv::Mat& src);
 void drawCut(cv::Mat& src, std::vector<cv::Point> &cut);
 
-//@deprecate
+//@deprecated
 void projectVertical(cv::Mat &input, std::vector<int> &output);
 void projectVertical(Blobs &blobs, std::vector<int> &output);
 void updateVerticalProjection(std::vector<cv::Point2i>& blobPoints, std::vector<int>& output);
@@ -50,6 +52,7 @@ std::vector<int> genVerticalCuts(std::vector<int>& projectV);
 void thinning(const cv::Mat& src, cv::Mat& dst);
 
 //recognize-touch
+//@deprecated
 cv::Mat makeDigitMat(const cv::Mat& crop);
 cv::Mat makeDigitMat(Blob& blob, float slantAngle = 0);
 digit_recognizer::result recognize1D(const cv::Mat& src);
