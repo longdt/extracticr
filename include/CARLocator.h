@@ -11,7 +11,8 @@
 
 #include "blob.h"
 namespace icr {
-
+void trimNoises(Blobs& blobs);
+bool intersect(int y0, int y1, cv::Rect rect);
 class CARLocator {
 protected:
 	cv::Mat cheqImg;
@@ -37,6 +38,15 @@ public:
 	virtual cv::Rect getRMLocation(Blobs& blobs, cv::Rect& carLoc);
 	virtual cv::Rect getMPRLocation();
 	virtual cv::Rect getCARLocation();
+	virtual void getHandwrittenBlobs(Blobs& blobs);
+};
+
+class PrintedCARLocator : public CARLocator {
+private:
+	bool boundingBox;
+	cv::Mat mprImg;
+public:
+	explicit PrintedCARLocator(cv::Mat& cheqImg);
 	virtual void getHandwrittenBlobs(Blobs& blobs);
 };
 
