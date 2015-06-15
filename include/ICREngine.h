@@ -18,16 +18,23 @@ namespace icr {
 #define CHEQUE_MY 0
 #define CHEQUE_PH 1
 class ICREngine {
-private:
+protected:
 	int chequeType;
 	int trainWeight(std::vector<float>& weights);
 public:
-	ICREngine(int type = CHEQUE_MY);
+	explicit ICREngine(int type = CHEQUE_MY);
 	static void loadModels(std::string mpath);
-	std::string recognite(cv::Mat& cheque, float* confidence = NULL);
+	virtual std::string recognite(cv::Mat& cheque, float* confidence = NULL);
 	void trainWeight();
 	void trainWeightV2();
 	virtual ~ICREngine();
+};
+
+class PrintedEngine : public ICREngine {
+public:
+	explicit PrintedEngine(int type = CHEQUE_MY);
+	static void loadModels(std::string mpath);
+	virtual std::string recognite(cv::Mat& cheque, float* confidence = NULL);
 };
 
 } /* namespace icr */
