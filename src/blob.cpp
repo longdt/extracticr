@@ -277,14 +277,14 @@ void estHeightVertCenter(Blobs& blobs, float& strHeight, float& middleLine) {
 }
 
 cv::Mat drawBlobs(const Blobs& blobs) {
-	cv::Mat output;
+	cv::Rect rect = blobs.boundingRect();
+	cv::Mat output(rect.y + rect.height, rect.x + rect.width, CV_8UC3);
 	drawBlobs(blobs, output);
 	return output;
 }
 
 void drawBlobs(const Blobs& blobs, cv::Mat& output) {
-	cv::Rect rect = blobs.boundingRect();
-	output = cv::Mat::zeros(rect.y + rect.height, rect.x + rect.width, CV_8UC3);
+	output = cv::Scalar::all(0);
 	// Randomy color the blobs
 	for (size_t i = 0; i < blobs.size(); i++) {
 		unsigned char r = 255 * (rand() / (1.0 + RAND_MAX));
