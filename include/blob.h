@@ -44,6 +44,7 @@ public:
 	template<class _EqPredicate> void partition(std::vector<int>& label, _EqPredicate predicate=_EqPredicate()) {
 		cv::partition(blobs, label, predicate);
 	}
+	int findBiggestBlob(std::function<bool(int)> accept = [](int i) -> bool {return true;});
 	cv::Rect boundingRect() const;
 	cv::Rect boundingRect(int from, int end) const;
 	cv::Point2f getMassCenter() const;

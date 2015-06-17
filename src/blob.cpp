@@ -149,6 +149,22 @@ void findBlobs(const cv::Mat &binary, Blobs &blobs) {
 	}
 }
 
+int Blobs::findBiggestBlob(std::function<bool(int)> accept) {
+	int bIdx = -1;
+	int biggest = -1;
+	int area = 0;
+	for (int i = 0; i < blobs.size(); ++i) {
+		if (accept(i)) {
+			area = blobs[i]->points.size();
+			if (area > biggest) {
+				bIdx = i;
+				biggest = area;
+			}
+		}
+	}
+	return bIdx;
+}
+
 #define MAX_INT 0xfffffff
 
 cv::Rect Blobs::boundingRect() const {
