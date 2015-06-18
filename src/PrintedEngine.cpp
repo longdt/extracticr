@@ -8,6 +8,8 @@
 #include "ICREngine.h"
 
 #include "CARLocator.h"
+
+#include "NumberRecognizer.h"
 namespace icr {
 PrintedEngine::PrintedEngine(int type) : ICREngine(type) {
 
@@ -27,7 +29,8 @@ std::string PrintedEngine::recognite(cv::Mat& cheque, float* confidence) {
 
 	cv::Rect loc = blobs.boundingRect();
 	blobs.move(-loc.x, -loc.y);
-	return "";
+	NumberRecognizer nr(blobs);
+	return nr.predict(confidence);
 }
 
 }

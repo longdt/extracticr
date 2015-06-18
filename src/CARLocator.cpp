@@ -256,6 +256,156 @@ PrintedCARLocator::PrintedCARLocator(cv::Mat& cheqImg) : CARLocator(cheqImg), mp
 
 void PrintedCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	Rect box = getCARLocation();
+	Mat bin;
+	bin = mprImg / 255;
+	findBlobs(bin, blobs);
+	removeNoise(blobs);
+	Blobs rmBlobs;
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		blobs[i]->boundingRect();
+	}
+	blobs.clone(rmBlobs);
+	Rect rm = getRMLocation(rmBlobs, box);
+	mprImg = drawBinaryBlobs(blobs);
+	Mat cdst;
+	cvtColor(this->mprImg, cdst, CV_GRAY2BGR);
+	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
+	cv::rectangle(cdst, box, CV_RGB(0,255,0));
+	imshow("cdst", cdst);
+	if (rm.height == 0 || rm.width / rm.height > 5) {		//can't detect RM symbol
+		blobs.clear();
+		return;
+	}
+
+	int startX = rm.x + rm.width;
+	int endX = box.x + box.width;
+	//get only blob inside box
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		Blob* b = blobs[i];
+		Rect rect = b->boundingRect();
+		Point center(rect.x + rect.width / 2, rect.y + rect.height / 2);
+		if (!box.contains(center) || rect.x <= startX || rect.width > box.width / 2 || rect.x + rect.width > endX) {
+			blobs.erase(i);
+			--i;
+		} else if (rect.y + rect.height + 2 >= box.y + box.height && rect.width / (float) rect.height > 2) { //TODO more condition
+			blobs.erase(i);
+			--i;
+		}
+	}
+	blobs.sort(sortByVertical);
+	int y0 = rm.y;
+	int y1 = rm.y + rm.height;
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		Blob* b = blobs[i];
+		Rect rect = b->boundingRect();
+		if (!intersect(y0, y1, rect)) {
+			blobs.erase(i);
+			--i;
+		} else {
+			y0 = std::min(y0, rect.y);
+			y1 = std::max(y1, rect.y + rect.height);
+		}
+	}
+	trimNoises(blobs);
+}
+
+cv::Rect PrintedCARLocator::getCARLocation() {
+	boundingBox = false;
+	std::vector<cv::Vec4i> lines;
+	HoughLinesP(mprImg, lines, 1, CV_PI/ 2, 40, 40, 10 );
+	int minX = 0;
+	int maxX = mprImg.cols - 1;
+	int minY = 0;
+	int maxY = mprImg.rows - 1;
+	//find vertical line
+	Mat cdst;
+	cvtColor(this->mprImg, cdst, CV_GRAY2BGR);
+	for( size_t i = 0; i < lines.size(); i++ ) {
+	  Vec4i l = lines[i];
+	  line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0, 255), 1, CV_AA);
+	  if (l[0] == l[2] && std::abs(l[1] - l[3]) > mprImg.rows * 0.3) {
+		  if (l[0] < mprImg.cols / 2) {
+			  minX = std::max(l[0], minX);
+			  boundingBox = true;
+		  } else {
+			  maxX = std::min(l[0], maxX);
+			  boundingBox = true;
+		  }
+	  } else if (l[1] == l[3] && std::abs(l[0] - l[2]) > mprImg.cols * 0.3) {
+		  if (l[1] < mprImg.rows / 4) {
+			  minY = std::max(l[1], minY);
+		  } else if (l[1] >= mprImg.rows * 3 / 4) {
+			  maxY = std::min(l[1], maxY);
+		  }
+	  }
+	}
+	Rect car(minX, minY, maxX - minX + 1, maxY - minY + 1);
+	//remove guideline
+//	removeBaseline(mprImg, lines, maxY);
+	cv::rectangle(cdst, car, CV_RGB(0,255,0));
+	imshow("car", cdst);
+	imshow("mprImg", mprImg);
+	return car;
+}
+
+cv::Rect PrintedCARLocator::getRMLocation(Blobs& blobs, cv::Rect& carLoc) {
+	Rect box = carLoc;
+	int blobWidthThres = box.height / 2;
+	if (blobWidthThres < 70) { //blobWidthThres must at least 70
+		blobWidthThres = 70;
+	}
+#define PADDING_HEIGHT 0.2
+	box.y += box.height * PADDING_HEIGHT;
+	box.height *= 1 - PADDING_HEIGHT * 2;
+	box.width = box.height;
+	//DEBUG
+	Mat rmImg(mprImg.size(), CV_8UC3);
+	drawBlobs(blobs, rmImg);
+	cv::rectangle(rmImg, box, CV_RGB(0,255,0));
+	imshow("rmImg", rmImg);
+	//select blob within box
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		Blob* b = blobs[i];
+		Rect rect = b->boundingRect();
+		Point center(rect.x + rect.width / 2, rect.y + rect.height / 2);
+		if (!box.contains(center) || rect.width > blobWidthThres || rect.height >= blobWidthThres) {
+			blobs.erase(i);
+			--i;
+		}
+	}
+	Rect rs = blobs.boundingRect();
+	if (rs.height >= rs.width) {
+		//select blob within box
+		for (size_t i = 0; i < blobs.size(); ++i) {
+			Blob* b = blobs[i];
+			Rect rect = b->boundingRect();
+			if (rect.y <= carLoc.y || rect.y + rect.height >= carLoc.y + carLoc.height) {
+				blobs.erase(i);
+				--i;
+			}
+		}
+		rs = blobs.boundingRect();
+	} else if (rs.height + rs.y > carLoc.y + carLoc.height) {
+		carLoc.height += 5;
+	}
+	int biggestIdx = blobs.findBiggestBlob();
+	int secIdx = blobs.findBiggestBlob([=](int i) -> bool {return i != biggestIdx;});
+	if (secIdx == -1 || blobs[secIdx]->points.size() / ((float) blobs[biggestIdx]->points.size()) < 0.5 ) {
+		if (biggestIdx == -1) {
+			std::cout << "missing M" << std::endl;
+			return rs;
+		}
+		auto brect = blobs[biggestIdx]->boundingRect();
+		float aspect = brect.height /(float) brect.width;
+		if (aspect > 0.45 && aspect < 0.8) {
+			rs = brect;
+		} else {
+			std::cout << "missing M" << std::endl;
+		}
+	} else {
+		rs = boundingRect(blobs[biggestIdx]->boundingRect(), blobs[secIdx]->boundingRect());
+	}
+	return rs;
 }
 
 } /* namespace icr */

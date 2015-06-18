@@ -17,7 +17,7 @@ namespace cv {
 enum class BhThresholdMethod{OTSU, NIBLACK, SAUVOLA, WOLFJOLION};
 void doThreshold(cv::InputArray src, cv::OutputArray dst, const BhThresholdMethod &method);
 void removeNoise(cv::Mat& binary);
-
+void removeNoise(Blobs& blobs);
 //dropfall
 //@deprecated
 void dropfallLeft(const cv::Mat& src, std::vector<cv::Point2i >& cut, int start, bool top);

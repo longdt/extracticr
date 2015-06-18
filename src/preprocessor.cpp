@@ -281,6 +281,28 @@ void removeNoise(cv::Mat& img) {
 	drawBinaryBlobs(blobs, img);
 }
 
+void removeNoise(Blobs& blobs) {
+	float mina = FLT_MAX;
+	float maxa = 0;
+	for (int i = 0; i < blobs.size(); ++i) {
+		auto blob = blobs[i];
+		auto rect = blob->boundingRect();
+		float aspect = rect.height / (float) rect.width;
+		mina = std::min(mina, aspect);
+		maxa = std::max(maxa, aspect);
+	}
+	for (int i = 0; i < blobs.size(); ++i) {
+		auto blob = blobs[i];
+		auto rect = blob->boundingRect();
+		float aspect = rect.height / (float) rect.width;
+		float ta = (aspect - mina) / (float) (maxa - mina);
+		if (rect.height == 1 || (ta < 0.002 && rect.height < 5) || (aspect < 0.2 && rect.height < 3)) {
+			blobs.erase(i);
+			--i;
+		}
+	}
+}
+
 cv::Mat cropBlob(Blob& blob, int pad) {
 	cv::Rect bound = blob.boundingRect();
 	cv::Mat rs = cv::Mat::zeros(bound.height + 2 * pad, bound.width + 2 * pad, CV_8UC1);

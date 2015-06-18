@@ -48,6 +48,8 @@ private:
 public:
 	explicit PrintedCARLocator(cv::Mat& cheqImg);
 	virtual void getHandwrittenBlobs(Blobs& blobs);
+	virtual cv::Rect getCARLocation();
+	virtual cv::Rect getRMLocation(Blobs& blobs, cv::Rect& carLoc);
 };
 
 } /* namespace icr */
