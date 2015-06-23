@@ -93,9 +93,12 @@ void loadChequeLabel(string file, unordered_map<string, string>& dst) {
 }
 
 string removeDelimiter(string number) {
-	for (auto it = number.begin(); it != number.end(); ++it) {
+	auto it = number.begin();
+	while (it != number.end()) {
 		if (*it == ',') {
-			number.erase(it);
+			it = number.erase(it);
+		} else {
+			++it;
 		}
 	}
 	return number;
