@@ -324,10 +324,10 @@ cv::Rect PrintedCARLocator::getCARLocation() {
 	  Vec4i l = lines[i];
 	  line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0, 255), 1, CV_AA);
 	  if (l[0] == l[2] && std::abs(l[1] - l[3]) > mprImg.rows * 0.3) {
-		  if (l[0] < mprImg.cols / 2) {
+		  if (l[0] < mprImg.cols / 10) {
 			  minX = std::max(l[0], minX);
 			  boundingBox = true;
-		  } else {
+		  } else if (l[0] >= mprImg.cols * 9 / 10) {
 			  maxX = std::min(l[0], maxX);
 			  boundingBox = true;
 		  }

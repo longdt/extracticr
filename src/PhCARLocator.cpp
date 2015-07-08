@@ -179,6 +179,7 @@ void PhCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	Mat bin;
 	bin = mprImg / 255;
 	findBlobs(bin, blobs);
+	removeNoise(blobs);
 	Blobs rmBlobs;
 	for (size_t i = 0; i < blobs.size(); ++i) {
 		blobs[i]->boundingRect();

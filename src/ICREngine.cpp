@@ -78,7 +78,7 @@ int detectTerminator(Blobs& blobs) {
 		}
 	}
 	float rate = firstHeighest / (float) secondHeighest;
-	if (rate >= 1.8 || (idx1 > idx2 + 2 && rate >= 1.5)) {
+	if ((rate >= 1.8 && idx1 > 1) || (idx1 > idx2 + 2 && rate >= 1.5)) {
 		return idx1;
 	}
 	return -1;
@@ -115,7 +115,12 @@ void ICREngine::loadModels(std::string mpath) {
 }
 
 std::string ICREngine::recognite(cv::Mat& cheque, float* confidence) {
-	CARLocator* locator = chequeType == CHEQUE_PH ? new PhCARLocator(cheque) : new CARLocator(cheque);
+	CARLocator* locator = NULL;
+	if (chequeType == CHEQUE_PH) {
+		locator = new PhCARLocator(cheque);
+	} else {
+		locator = new PrintedCARLocator(cheque);
+	}
 	Blobs blobs;
 	locator->getHandwrittenBlobs(blobs);
 	delete locator;
