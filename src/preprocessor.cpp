@@ -291,14 +291,22 @@ void removeNoise(Blobs& blobs) {
 		mina = std::min(mina, aspect);
 		maxa = std::max(maxa, aspect);
 	}
+	vector<int> noise;
 	for (int i = 0; i < blobs.size(); ++i) {
 		auto blob = blobs[i];
 		auto rect = blob->boundingRect();
 		float aspect = rect.height / (float) rect.width;
 		float ta = (aspect - mina) / (float) (maxa - mina);
 		if (rect.height == 1 || (ta < 0.002 && rect.height < 5) || (aspect < 0.2 && rect.height < 3)) {
-			blobs.erase(i);
-			--i;
+//			blobs.erase(i);
+//			--i;
+			noise.push_back(i);
+		}
+	}
+	if (noise.size() > 1) {
+		for (int i = noise.size() - 1; i >= 0; --i) {
+			int index = noise[i];
+			blobs.erase(index);
 		}
 	}
 }
