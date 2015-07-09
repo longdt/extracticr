@@ -84,13 +84,15 @@ int detectTerminator(Blobs& blobs) {
 	return -1;
 }
 
-void removeTerminator(Blobs& blobs) {
+bool removeTerminator(Blobs& blobs) {
 	int idx = detectTerminator(blobs);
 	if (idx > 0) {
 		for (int i = blobs.size() - 1; i >= idx; --i) {
 			blobs.erase(i);
 		}
+		return true;
 	}
+	return false;
 }
 
 int detectPeriod(Blobs& blobs) {
@@ -132,13 +134,13 @@ std::string ICREngine::recognite(cv::Mat& cheque, float* confidence) {
 	float angle = deslant(loc.size(), blobs);
 	loc = blobs.boundingRect();
 //	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
-	removeTerminator(blobs);
+	bool hasTerm = removeTerminator(blobs);
 	groupVertical(blobs);
 //	defragment(car, blobs);
 	if (blobs.size() == 0) {
 		return "";
 	}
-	NumberRecognizer nr(blobs);
+	NumberRecognizer nr(blobs, !hasTerm);
 	//return extractDigit(blobs, angle);
 	return nr.predict(confidence);
 }

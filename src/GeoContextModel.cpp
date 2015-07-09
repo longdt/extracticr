@@ -261,6 +261,8 @@ void GeoContext::getBIGVector(vec_t& output) {
 	output.push_back((curUcg.box.x - prevUcg.box.x - prevUcg.box.width) / strHeight);
 }
 
+NumberModel::NumberModel(bool decimal) : decimal(decimal) {}
+
 float NumberModel::getScore(std::vector<label_t> labels, label_t l) {
 	//manual score implementation
 	if (labels.empty() && l >= 10) {
@@ -294,6 +296,9 @@ float NumberModel::getFinalScore(std::vector<label_t> labels, label_t l) {
 	auto iter = std::find(labels.begin(), labels.end(), 10);
 	auto end = labels.end();
 	if (iter != end) {
+		if (!decimal) {
+			return score - 2;
+		}
 		return std::distance(iter, end) != 2 ? score - 1 : score + 0;
 	}
 	//delimiter

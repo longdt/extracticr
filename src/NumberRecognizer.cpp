@@ -24,10 +24,10 @@ namespace icr {
 using namespace cv;
 label_t getBIGLabel(label_t prev, label_t cur);
 std::vector<float> DEFAULT_WEIGHT{0.958f, 0.306f, 1.765f, 0.506f, 1.008f};
-NumberRecognizer::NumberRecognizer(Blobs &blobs) : NumberRecognizer(blobs, DEFAULT_WEIGHT){
+NumberRecognizer::NumberRecognizer(Blobs &blobs, bool decimal) : NumberRecognizer(blobs, DEFAULT_WEIGHT, decimal) {
 }
 
-NumberRecognizer::NumberRecognizer(Blobs &blobs, std::vector<float>& weights) : weights(weights) {
+NumberRecognizer::NumberRecognizer(Blobs &blobs, std::vector<float>& weights, bool decimal) : weights(weights), nm(decimal) {
 	estHeightVertCenter(blobs, strHeight, middleLine);
 	genOverSegm(blobs);
 	//TODO debug
@@ -39,7 +39,6 @@ NumberRecognizer::NumberRecognizer(Blobs &blobs, std::vector<float>& weights) : 
 	imshow("segms", img);
 }
 
-NumberModel NumberRecognizer::nm;
 GeoContextModel NumberRecognizer::gcm;
 void NumberRecognizer::loadModels(std::string& mpath) {
 	gcm.loadModel(mpath);

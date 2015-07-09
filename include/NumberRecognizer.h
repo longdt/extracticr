@@ -31,8 +31,8 @@ class Path;
 class Beam;
 class NumberRecognizer {
 private:
-	static NumberModel nm;
 	static GeoContextModel gcm;
+	NumberModel nm;
 	std::vector<float> weights;
 	float strHeight;
 	float middleLine;
@@ -46,8 +46,8 @@ private:
 	digit_recognizer::result recognizeBlob(Blobs& segms, int start, int end);
 	std::pair<label_t, float> predictNode(std::vector<label_t>& labels, digit_recognizer::result rs, GeoContext& gc, bool lastNode, std::pair<label_t, float>* secChoice = NULL);
 public:
-	NumberRecognizer(Blobs &blobs, std::vector<float>& weights);
-	NumberRecognizer(Blobs &blobs);
+	NumberRecognizer(Blobs &blobs, std::vector<float>& weights, bool decimal = true);
+	NumberRecognizer(Blobs &blobs, bool decimal = true);
 	static void loadModels(std::string& mpath);
 	std::string predict(float* confidence = NULL);
 	virtual ~NumberRecognizer();

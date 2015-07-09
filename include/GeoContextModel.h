@@ -68,7 +68,10 @@ public:
 };
 
 class NumberModel {
+private:
+	bool decimal;
 public:
+	NumberModel(bool decimal);
 	float getScore(std::vector<label_t> labels, label_t l);
 	float getFinalScore(std::vector<label_t> labels, label_t l);
 };
