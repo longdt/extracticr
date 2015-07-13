@@ -557,8 +557,8 @@ void groupVertical(Blobs& blobs) {
 bool sortByVertical(Blob* blob1, Blob* blob2) {
 	cv::Rect b1 = blob1->boundingRect();
 	cv::Rect b2 = blob2->boundingRect();
-	int center1 = b1.x + b1.width / 2;
-	int center2 = b2.x + b2.width / 2;
+	float center1 = b1.x + b1.width / 4.0f;
+	float center2 = b2.x + b2.width / 4.0f;
 	return (center1 < center2);
 }
 
