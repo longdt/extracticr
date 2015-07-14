@@ -55,6 +55,7 @@ void removeDelimiter(cv::Rect carBox, int middleLine, Blobs& blobs, float slantA
 
 namespace icr {
 
+//@deprecated
 int detectTerminator(Blobs& blobs) {
 	if (blobs.size() <= 1) {
 		return -1;
@@ -77,15 +78,84 @@ int detectTerminator(Blobs& blobs) {
 			idx2 = i;
 		}
 	}
+	if (secondHeighest == 0) {
+		return -1;
+	}
 	float rate = firstHeighest / (float) secondHeighest;
 	if ((rate >= 1.8 && idx1 > 1) || (idx1 > idx2 + 2 && rate >= 1.5)) {
+		return idx1;
+	}
+//	else if (idx2 < idx1) {
+//		return -1;
+//	}
+
+	secondHeighest = 0;
+	for (size_t i = 0; i < idx1; ++i) {
+		cv::Rect rect = blobs[i]->boundingRect();
+		if (secondHeighest < rect.height) {
+			secondHeighest = rect.height;
+			idx2 = i;
+		}
+	}
+	if (secondHeighest == 0) {
+		return -1;
+	}
+	rate = firstHeighest / (float) secondHeighest;
+	return rate > 1.5 ? idx1 : -1;
+}
+
+int detectTerm(Blobs& blobs) {
+	if (blobs.size() <= 1) {
+		return -1;
+	}
+	int firstHeighest = 0;
+	int idx1 = 0;
+	for (size_t i = 0; i < blobs.size(); ++i) {
+		cv::Rect rect = blobs[i]->boundingRect();
+		if (firstHeighest < rect.height) {
+			firstHeighest = rect.height;
+			idx1 = i;
+		}
+	}
+	float strHeight = 0;
+	if (idx1 == 0) {
+		return -1;
+	} else if (idx1 == 1) {
+		strHeight = blobs[0]->boundingRect().height;
+		return -1;
+	} else {
+		float heightScore = 0;
+		int sumHeightW = 0;
+		for (int i = 0; i < idx1; ++i) {
+			cv::Rect rect = blobs[i]->boundingRect();
+			heightScore += rect.height * blobs[i]->points.size();
+			sumHeightW += blobs[i]->points.size();
+		}
+		strHeight = heightScore / sumHeightW;
+	}
+	if (strHeight < 20 && idx1 == 1) {
+		return -1;
+	}
+	float rate = firstHeighest / strHeight;
+	if (rate <= 1.5) {
+		return -1;
+	} else if (rate > 1.8) {
+		return idx1;
+	}
+	cv::Mat src = blobs.cropBlobs(idx1, idx1 + 1);
+	auto digitMat = makeDigitMat(src);
+	vec_t in;
+	matToVect(digitMat, in);
+	auto rs = recognizer.predict(in);
+	int label = rs.label();
+	if (label == 1 || (rs.confidence() < 0.1)) {
 		return idx1;
 	}
 	return -1;
 }
 
 bool removeTerminator(Blobs& blobs) {
-	int idx = detectTerminator(blobs);
+	int idx = detectTerm(blobs);
 	if (idx > 0) {
 		for (int i = blobs.size() - 1; i >= idx; --i) {
 			blobs.erase(i);
