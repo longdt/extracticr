@@ -98,7 +98,16 @@ int distanceK(Mat& src, int row, int left, int right) {
 	return right - left - 1;
 }
 
-void fillUStrokes(Mat& src, int lt, int row, std::vector<int>& strokes) {
+bool hasAboveStroke(Mat& src, int row, int col, int boxHeight) {
+	for (int rowEnd = row - 0.8 * boxHeight; row > rowEnd; --row) {
+		if (src.at<uchar>(row, col) > 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void fillUStrokes(Mat& src, int lt, int row, std::vector<int>& strokes, int boxHeight) {
 	if (strokes.size() < 4) {
 		return;
 	}
@@ -107,14 +116,15 @@ void fillUStrokes(Mat& src, int lt, int row, std::vector<int>& strokes) {
 		int y = floor((2 * lt + 2.0) * x / (2 * lt + 1.0));
 		int k = distanceK(src, row, strokes[i], strokes[i + 1]);
 		std::cout << k << std::endl;
-		if (y <= k + 2 && y >= k -2) {
+		int center = (strokes[i] + strokes[i + 1]) / 2;
+		if (y <= k + 2 && y >= k -2 && hasAboveStroke(src, row, center, boxHeight)) {
 			line(src, Point(strokes[i] - 2, row), Point(strokes[i + 1] + 2, row), Scalar(255, 255, 255), 1, CV_AA);
 			line(src, Point(strokes[i] - 2, row + 1), Point(strokes[i + 1] + 2, row + 1), Scalar(255, 255, 255), 1, CV_AA);
 		}
 	}
 }
 
-void removeBaseline(Mat& mprImg, std::vector<cv::Vec4i>& lines, int maxY) {
+void removeBaseline(Mat& mprImg, std::vector<cv::Vec4i>& lines, int maxY, int minY) {
 	--maxY;
 	Rect r(0, maxY, mprImg.cols, mprImg.rows - maxY);
 	mprImg(r) = Scalar::all(0);
@@ -131,7 +141,7 @@ void removeBaseline(Mat& mprImg, std::vector<cv::Vec4i>& lines, int maxY) {
 	int l1 = *std::min_element(lt.begin(), lt.end()) - 1;
 	std::vector<int> strokes;
 	findStrokes(mprImg, l1, strokes);
-	fillUStrokes(mprImg, lt.size(), l1, strokes);
+	fillUStrokes(mprImg, lt.size(), l1, strokes, maxY - minY);
 }
 
 cv::Rect PhCARLocator::getCARLocation() {
@@ -166,7 +176,7 @@ cv::Rect PhCARLocator::getCARLocation() {
 	}
 	Rect car(minX, minY, maxX - minX + 1, maxY - minY + 1);
 	//remove guideline
-	removeBaseline(mprImg, lines, maxY);
+	removeBaseline(mprImg, lines, maxY, minY);
 	cv::rectangle(cdst, car, CV_RGB(0,255,0));
 	imshow("car", cdst);
 	imshow("mprImg", mprImg);
