@@ -113,6 +113,9 @@ void fillUStrokes(Mat& src, int lt, int row, std::vector<int>& strokes, int boxH
 	}
 	for (int i = 1; i < strokes.size() - 1; i += 2) {
 		int x = strokes[i + 1] - strokes[i];
+		if (x > boxHeight / 3) {
+			continue;
+		}
 		int y = floor((2 * lt + 2.0) * x / (2 * lt + 1.0));
 		int k = distanceK(src, row, strokes[i], strokes[i + 1]);
 		std::cout << k << std::endl;
