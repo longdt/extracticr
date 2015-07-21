@@ -393,6 +393,21 @@ void projectVertical(cv::Mat &input, std::vector<int> &output) {
 	}
 }
 
+void projectVertical1(cv::Mat &input, std::vector<int> &output) {
+	output.resize(input.cols);
+	for (int c = 0; c < input.cols; ++c) {
+		int sum = 0;
+		for (int r = 0; r < input.rows; ++r) {
+			if (input.at<uchar>(r, c) > 0
+					|| (c > 0 && input.at<uchar>(r, c - 1) > 0)
+					|| (c < input.cols - 1 && input.at<uchar>(r, c + 1) > 0)) {
+				sum += 1;
+			}
+		}
+		output[c] = sum;
+	}
+}
+
 void projectVertical(Blob& blob, std::vector<int>& output) {
 	cv::Rect box = blob.boundingRect();
 	output.resize(box.width);
