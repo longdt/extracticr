@@ -44,6 +44,7 @@ void drawCut(cv::Mat& src, std::vector<cv::Point> &cut);
 
 //@deprecated
 void projectVertical(cv::Mat &input, std::vector<int> &output);
+void projectVertical1(cv::Mat &input, std::vector<int> &output);
 void projectVertical(Blobs &blobs, std::vector<int> &output);
 void updateVerticalProjection(std::vector<cv::Point2i>& blobPoints, std::vector<int>& output);
 std::vector<int> genVerticalCuts(std::vector<int>& projectV);
