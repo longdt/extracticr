@@ -204,7 +204,10 @@ std::string ICREngine::recognite(cv::Mat& cheque, float* confidence) {
 	float angle = deslant(loc.size(), blobs);
 	loc = blobs.boundingRect();
 //	removeDelimiter(loc, loc.y + loc.height / 2, blobs, angle);
-	bool hasTerm = removeTerminator(blobs);
+	bool hasTerm = false;
+	if (chequeType == CHEQUE_MY) {
+		hasTerm = removeTerminator(blobs);
+	}
 	groupVertical(blobs);
 //	defragment(car, blobs);
 	if (blobs.size() == 0) {
