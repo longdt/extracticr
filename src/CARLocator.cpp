@@ -259,7 +259,6 @@ void PrintedCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	Mat bin;
 	bin = mprImg / 255;
 	findBlobs(bin, blobs);
-	removeNoise(blobs);
 	Blobs rmBlobs;
 	for (size_t i = 0; i < blobs.size(); ++i) {
 		blobs[i]->boundingRect();
@@ -293,6 +292,7 @@ void PrintedCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 		}
 	}
 	blobs.sort(sortByVertical);
+	removeNoise(blobs);
 	int y0 = rm.y;
 	int y1 = rm.y + rm.height;
 	for (size_t i = 0; i < blobs.size(); ++i) {
