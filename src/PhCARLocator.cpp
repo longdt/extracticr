@@ -118,7 +118,7 @@ void fillUStrokes(Mat& src, int lt, int row, std::vector<int>& strokes, int boxH
 		}
 		int y = floor((2 * lt + 2.0) * x / (2 * lt + 1.0));
 		int k = distanceK(src, row, strokes[i], strokes[i + 1]);
-		std::cout << k << std::endl;
+//		std::cout << k << std::endl;
 		int center = (strokes[i] + strokes[i + 1]) / 2;
 		if (y <= k + 2 && y >= k -2 && hasAboveStroke(src, row, center, boxHeight)) {
 			line(src, Point(strokes[i] - 2, row), Point(strokes[i + 1] + 2, row), Scalar(255, 255, 255), 1, CV_AA);
@@ -169,11 +169,15 @@ cv::Rect PhCARLocator::getCARLocation() {
 	int minY = 0;
 	int maxY = mprImg.rows - 1;
 	//find vertical line
+#ifdef DEBUG
 	Mat cdst;
 	cvtColor(this->mprImg, cdst, CV_GRAY2BGR);
+#endif
 	for( size_t i = 0; i < lines.size(); i++ ) {
 	  Vec4i l = lines[i];
+#ifdef DEBUG
 	  line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0, 255), 1, CV_AA);
+#endif
 	  if (l[0] == l[2] && std::abs(l[1] - l[3]) > mprImg.rows * 0.3) {
 		  if (l[0] < mprImg.cols / 4) {
 			  minX = std::max(l[0], minX);
@@ -199,9 +203,11 @@ cv::Rect PhCARLocator::getCARLocation() {
 	}
 	//remove guideline
 	removeBaseline(mprImg, lines, maxY, minY);
+#ifdef DEBUG
 	cv::rectangle(cdst, car, CV_RGB(0,255,0));
 	imshow("car", cdst);
 	imshow("mprImg", mprImg);
+#endif
 	return car;
 }
 
@@ -218,11 +224,13 @@ void PhCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	}
 	blobs.clone(rmBlobs);
 	Rect rm = getRMLocation(rmBlobs, box);
+#ifdef DEBUG
 	Mat cdst;
 	cvtColor(this->mprImg, cdst, CV_GRAY2BGR);
 	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
 	cv::rectangle(cdst, box, CV_RGB(0,255,0));
 	imshow("cdst", cdst);
+#endif
 	if (rm.height == 0 || rm.width / rm.height > 5) {		//can't detect RM symbol
 		blobs.clear();
 		return;

@@ -45,15 +45,19 @@ cv::Rect CARLocator::getCARLocation() {
 	int minY = mpr.y;
 	int maxY = mpr.y + mpr.height - 1;
 	//find vertical line
+#ifdef DEBUG
 	Mat cdst;
 	cvtColor(this->cheqImg, cdst, CV_GRAY2BGR);
+#endif
 	for( size_t i = 0; i < lines.size(); i++ ) {
 	  Vec4i l = lines[i];
 	  l[0] += roi.x;
 	  l[2] += roi.x;
 	  l[1] += roi.y;
 	  l[3] += roi.y;
+#ifdef DEBUG
 	  line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0, 255), 1, CV_AA);
+#endif
 	  if (l[0] == l[2] && std::abs(l[1] - l[3]) > mpr.height * 0.5 && intersect(l[1], l[3], mpr)) {
 		  if (l[0] < mpr.x + mpr.width / 2) {
 			  minX = std::max(std::max(l[0], mpr.x), minX);
@@ -73,8 +77,10 @@ cv::Rect CARLocator::getCARLocation() {
 	roi.y = minY;
 	roi.width = maxX - minX + 1;
 	roi.height = maxY - minY + 1;
+#ifdef DEBUG
 	cv::rectangle(cdst, roi, CV_RGB(0,255,0));
 	imshow("car", cdst);
+#endif
 	return roi;
 }
 
@@ -266,11 +272,13 @@ void PrintedCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 	blobs.clone(rmBlobs);
 	Rect rm = getRMLocation(rmBlobs, box);
 	mprImg = drawBinaryBlobs(blobs);
+#ifdef DEBUG
 	Mat cdst;
 	cvtColor(this->mprImg, cdst, CV_GRAY2BGR);
 	cv::rectangle(cdst, rm, CV_RGB(0,0,255));
 	cv::rectangle(cdst, box, CV_RGB(0,255,0));
 	imshow("cdst", cdst);
+#endif
 	if (rm.height == 0 || rm.width / rm.height > 5) {		//can't detect RM symbol
 		blobs.clear();
 		return;
@@ -318,11 +326,15 @@ cv::Rect PrintedCARLocator::getCARLocation() {
 	int minY = 0;
 	int maxY = mprImg.rows - 1;
 	//find vertical line
+#ifdef DEBUG
 	Mat cdst;
 	cvtColor(this->mprImg, cdst, CV_GRAY2BGR);
+#endif
 	for( size_t i = 0; i < lines.size(); i++ ) {
 	  Vec4i l = lines[i];
+#ifdef DEBUG
 	  line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0, 255), 1, CV_AA);
+#endif
 	  if (l[0] == l[2] && std::abs(l[1] - l[3]) > mprImg.rows * 0.3) {
 		  if (l[0] < mprImg.cols / 10) {
 			  minX = std::max(l[0], minX);
@@ -342,9 +354,11 @@ cv::Rect PrintedCARLocator::getCARLocation() {
 	Rect car(minX, minY, maxX - minX + 1, maxY - minY + 1);
 	//remove guideline
 //	removeBaseline(mprImg, lines, maxY);
+#ifdef DEBUG
 	cv::rectangle(cdst, car, CV_RGB(0,255,0));
 	imshow("car", cdst);
 	imshow("mprImg", mprImg);
+#endif
 	return car;
 }
 
@@ -358,11 +372,12 @@ cv::Rect PrintedCARLocator::getRMLocation(Blobs& blobs, cv::Rect& carLoc) {
 	box.y += box.height * PADDING_HEIGHT;
 	box.height *= 1 - PADDING_HEIGHT * 2;
 	box.width = box.height;
-	//DEBUG
+#ifdef DEBUG
 	Mat rmImg(mprImg.size(), CV_8UC3);
 	drawBlobs(blobs, rmImg);
 	cv::rectangle(rmImg, box, CV_RGB(0,255,0));
 	imshow("rmImg", rmImg);
+#endif
 	//select blob within box
 	for (size_t i = 0; i < blobs.size(); ++i) {
 		Blob* b = blobs[i];
