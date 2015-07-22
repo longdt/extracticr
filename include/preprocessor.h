@@ -9,7 +9,7 @@
 namespace cv {
 	void doNothing();
 }
-#define DEBUG
+//#define DEBUG
 #ifndef DEBUG
 #define imshow(str, img) doNothing()
 #endif

@@ -30,13 +30,14 @@ NumberRecognizer::NumberRecognizer(Blobs &blobs, bool decimal) : NumberRecognize
 NumberRecognizer::NumberRecognizer(Blobs &blobs, std::vector<float>& weights, bool decimal) : weights(weights), nm(decimal) {
 	estHeightVertCenter(blobs, strHeight, middleLine);
 	genOverSegm(blobs);
-	//TODO debug
+#ifdef DEBUG	//TODO debug
 	cv::Mat car = drawBlobs(blobs);
 	line(car, Point(0, middleLine), Point(car.cols -1, middleLine), Scalar(255, 0, 0));
 	cv::imshow("hwimg", car);
 	Mat img = drawBlobs(segms);
 	namedWindow("segms", WINDOW_NORMAL);
 	imshow("segms", img);
+#endif
 }
 
 GeoContextModel NumberRecognizer::gcm;
