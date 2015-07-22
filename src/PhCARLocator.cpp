@@ -131,7 +131,7 @@ void removeBaseline(Mat& mprImg, std::vector<cv::Vec4i>& lines, int maxY, int mi
 	--maxY;
 	Rect r(0, maxY, mprImg.cols, mprImg.rows - maxY);
 	mprImg(r) = Scalar::all(0);
-	removeNoise(mprImg);
+//	removeNoise(mprImg);
 //	removeNoise(mprImg);
 	std::set<int> lt;
 	lt.insert(maxY);
@@ -145,6 +145,19 @@ void removeBaseline(Mat& mprImg, std::vector<cv::Vec4i>& lines, int maxY, int mi
 	std::vector<int> strokes;
 	findStrokes(mprImg, l1, strokes);
 	fillUStrokes(mprImg, lt.size(), l1, strokes, maxY - minY);
+}
+
+void correctCAR(Mat& mprImg, Rect& car) {
+	Mat roi = mprImg(car);
+	vector<int> projectV;
+	projectVertical1(roi, projectV);
+	int startX = 0;
+	int endX = car.width / 4;
+	for (int thres = car.height / 2; startX < endX && projectV[startX] < thres; ++startX) {}
+	if (startX != endX) {
+		car.x += startX;
+		car.width = car.width - startX;
+	}
 }
 
 cv::Rect PhCARLocator::getCARLocation() {
@@ -162,10 +175,10 @@ cv::Rect PhCARLocator::getCARLocation() {
 	  Vec4i l = lines[i];
 	  line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0, 255), 1, CV_AA);
 	  if (l[0] == l[2] && std::abs(l[1] - l[3]) > mprImg.rows * 0.3) {
-		  if (l[0] < mprImg.cols / 2) {
+		  if (l[0] < mprImg.cols / 4) {
 			  minX = std::max(l[0], minX);
 			  boundingBox = true;
-		  } else {
+		  } else if (l[0] > mprImg.cols * 3 / 4) {
 			  maxX = std::min(l[0], maxX);
 			  boundingBox = true;
 		  }
@@ -178,6 +191,12 @@ cv::Rect PhCARLocator::getCARLocation() {
 	  }
 	}
 	Rect car(minX, minY, maxX - minX + 1, maxY - minY + 1);
+	if (!boundingBox && car.height < mprImg.rows / 1.8f) {
+		boundingBox = true;
+	}
+	if (boundingBox && minX == 0) {
+		correctCAR(mprImg, car);
+	}
 	//remove guideline
 	removeBaseline(mprImg, lines, maxY, minY);
 	cv::rectangle(cdst, car, CV_RGB(0,255,0));
