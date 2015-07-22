@@ -9,7 +9,7 @@
 #define BLOB_H_
 #include "opencv2/core/core.hpp"
 #include <vector>
-
+#include <functional>
 //blob
 class Blob {
 private:
