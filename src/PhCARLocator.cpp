@@ -107,6 +107,15 @@ bool hasAboveStroke(Mat& src, int row, int col, int boxHeight) {
 	return false;
 }
 
+bool hasAboveStroke(Mat& src, int row, int startCol, int endCol, int boxHeight) {
+	for (int col = startCol; col <= endCol; ++col) {
+		if (!hasAboveStroke(src, row, col, boxHeight)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 void fillUStrokes(Mat& src, int lt, int row, std::vector<int>& strokes, int boxHeight) {
 	if (strokes.size() < 4) {
 		return;
@@ -120,7 +129,7 @@ void fillUStrokes(Mat& src, int lt, int row, std::vector<int>& strokes, int boxH
 		int k = distanceK(src, row, strokes[i], strokes[i + 1]);
 //		std::cout << k << std::endl;
 		int center = (strokes[i] + strokes[i + 1]) / 2;
-		if (y <= k + 2 && y >= k -2 && hasAboveStroke(src, row, center, boxHeight)) {
+		if (y <= k + 2 && y >= k -2 && hasAboveStroke(src, row, strokes[i], strokes[i + 1], boxHeight)) {
 			line(src, Point(strokes[i] - 2, row), Point(strokes[i + 1] + 2, row), Scalar(255, 255, 255), 1, CV_AA);
 			line(src, Point(strokes[i] - 2, row + 1), Point(strokes[i + 1] + 2, row + 1), Scalar(255, 255, 255), 1, CV_AA);
 		}
@@ -247,6 +256,9 @@ void PhCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 			blobs.erase(i);
 			--i;
 		} else if (rect.y + rect.height + 2 >= box.y + box.height && rect.width / (float) rect.height > 2) { //TODO more condition
+			blobs.erase(i);
+			--i;
+		} else if (rect.width / (float) rect.height > 20 && rect.height < 8) { //blob too long
 			blobs.erase(i);
 			--i;
 		}

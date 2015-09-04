@@ -223,6 +223,20 @@ void NumberRecognizer::segment(Blobs& segms, Blob& blob) {
 	}
 	std::sort(cuts.begin(), cuts.end());
 	cuts.push_back(box.x + box.width);
+	//if cut point split blob to 2 small blob then just ignore
+	if (cuts.size() == 3) {
+		Blob* sub1 = getSubBlob(blob, cuts[0], cuts[1]);
+		Blob* sub2 = getSubBlob(blob, cuts[1], cuts[2]);
+		if (sub1->points.size() < 9 || sub2->points.size() < 9) {
+			delete sub1;
+			delete sub2;
+			segms.add(new Blob(blob));
+		} else {
+			segms.add(sub1);
+			segms.add(sub2);
+		}
+		return;
+	}
 	for (size_t i = 0, n = cuts.size() - 1; i < n; ++i) {
 		Blob* subBlob = getSubBlob(blob, cuts[i], cuts[i + 1]);
 		if (subBlob->points.empty()) {
