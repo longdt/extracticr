@@ -210,6 +210,10 @@ cv::Rect PhCARLocator::getCARLocation() {
 	if (boundingBox && minX == 0) {
 		correctCAR(mprImg, car);
 	}
+	if (minY > 0 && maxY == mprImg.rows - 1) {
+		maxY = std::min((int)(minY + maxY * 0.6), maxY);
+		car.height = maxY - minY;
+	}
 	//remove guideline
 	removeBaseline(mprImg, lines, maxY, minY);
 #ifdef DEBUG
@@ -259,6 +263,9 @@ void PhCARLocator::getHandwrittenBlobs(Blobs& blobs) {
 			blobs.erase(i);
 			--i;
 		} else if (rect.width / (float) rect.height > 20 && rect.height < 8) { //blob too long
+			blobs.erase(i);
+			--i;
+		} else if (rect.y + rect.height <= box.y + 2) { //small blob close up ceil of box
 			blobs.erase(i);
 			--i;
 		}
